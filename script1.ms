@@ -86,15 +86,25 @@ function getRandColor =
 
 function randLogo =
 (
-	-- Randomize box size
-	$Logo.width = random 18 25.0 -- x to the right of camera
-	$Logo.length = random 15 20.0 -- y upwards
-	$Logo.height = random 2 20.0 -- z towards camera
+	-- Choose shape
+	-- 0: box
+	-- 1: plane
+	shapeType = random 0 1
+	if shapeType == 0 then $Logo.baseObject = $Box001.baseObject
+	if shapeType == 1 then $Logo.baseObject = $Plane001.baseObject
 	
-	-- Move box so it rests on table
+	-- Randomize size
+	$Logo.width = random 18 25.0 -- x to the right of camera
+	$Logo.length = random 15 25.0 -- y upwards
+	if shapeType == 0 then $Logo.height = random 2 20.0 -- z towards camera
+
+	-- Move so it rests on table
 	pos = $Logo.pos
 	pos[3] = tableHeight + $Logo.length/2
 	$Logo.pos = pos
+
+	-- Randomize rotation
+	$Logo.rotation.z_rotation = random 70 110
 
 	-- Choose a random logo bitmap texture and get its aspect ratio
 	bmt = logoBmps[random 1 logoBmps.count]
@@ -103,7 +113,7 @@ function randLogo =
 	-- Randomize logo size
 	maxHeight = $Logo.length - 0.01
 	if $Logo.width / ratio < maxHeight then maxHeight = $Logo.width / ratio
-	bmt.coords.realWorldHeight = random 4.0 maxHeight
+	bmt.coords.realWorldHeight = random 6.0 maxHeight
 	bmt.coords.realWorldWidth = ratio * bmt.coords.realWorldHeight
 
 	-- Random logo position
@@ -123,10 +133,12 @@ function randLogo =
 	logoMat.diffusemap = comp
 
 	-- Return coordinates of logo corners
-	p1 = point3 bmt.coords.U_offset bmt.coords.V_offset $Logo.height
-	p2 = point3 (bmt.coords.U_offset + bmt.coords.realWorldWidth) bmt.coords.V_offset $Logo.height
-	p3 = point3 bmt.coords.U_offset (bmt.coords.V_offset + bmt.coords.realWorldHeight) $Logo.height
-	p4 = point3 (bmt.coords.U_offset + bmt.coords.realWorldWidth) (bmt.coords.V_offset + bmt.coords.realWorldHeight) $Logo.height
+	z = 0
+	if shapeType == 0 then z = $Logo.height
+	p1 = point3 bmt.coords.U_offset bmt.coords.V_offset z
+	p2 = point3 (bmt.coords.U_offset + bmt.coords.realWorldWidth) bmt.coords.V_offset z
+	p3 = point3 bmt.coords.U_offset (bmt.coords.V_offset + bmt.coords.realWorldHeight) z
+	p4 = point3 (bmt.coords.U_offset + bmt.coords.realWorldWidth) (bmt.coords.V_offset + bmt.coords.realWorldHeight) z
 	p1 = p1 *  $Logo.transform
 	p2 = p2 * $Logo.transform
 	p3 = p3 * $Logo.transform
