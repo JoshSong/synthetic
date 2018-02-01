@@ -89,7 +89,7 @@ function randLogo =
 	-- Choose shape
 	shapeType = ""
 	rand = random 0 100
-	if rand < 100 then
+	if rand < 20 then
 	(
 		shapeType = "plane"
 		$Logo.baseObject = $Plane001.baseObject
@@ -138,17 +138,21 @@ function randLogo =
 
 	-- Put material together
 	-- If plane, then chance for transparent background
-	rand = random 0 0
-	if shapeType == "plane" and rand == 0 then
-		logoMat.diffusemap = bmt
-	else
-	(
+	--rand = random 0 1
+	--if shapeType == "plane" and rand == 0 then
+	--(
+	--	logoMat.diffusemap = bmt
+	--	logoMat.opacityMap = bmt
+	--)
+	--else
+	--(
 		-- Random background color
 		color1 = getRandColor()
 		comp.mapList[1] = colorMap solidcolor:color1
 		comp.mapList[2] = bmt
 		logoMat.diffusemap = comp
-	)
+		logoMat.opacityMap = undefined
+	--)
 
 	-- Return coordinates of logo corners and logo index
 	z = 0
@@ -194,7 +198,7 @@ function saveLogoInfo logoInfo fname =
 	fstream = openFile fname mode:"w"
 	logoPath = logoPaths[logoInfo[5]]
 	split = filterString logoPath "\\"
-	format "% % % %\n%" out[1] out[2] out[3] out[4] logoPath to:fstream
+	format "% % % %\n%" out[1] out[2] out[3] out[4] split[split.count] to:fstream
 	
 	close fstream
 )
