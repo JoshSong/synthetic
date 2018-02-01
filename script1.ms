@@ -87,16 +87,23 @@ function getRandColor =
 function randLogo =
 (
 	-- Choose shape
-	-- 0: box
-	-- 1: plane
-	shapeType = random 0 1
-	if shapeType == 0 then $Logo.baseObject = $Box001.baseObject
-	if shapeType == 1 then $Logo.baseObject = $Plane001.baseObject
+	shapeType = ""
+	rand = random 0 100
+	if rand < 100 then
+	(
+		shapeType = "plane"
+		$Logo.baseObject = $Plane001.baseObject
+	)
+	else
+	(
+		shapeType = "box"
+		$Logo.baseObject = $Box001.baseObject
+	)
 	
 	-- Randomize size
 	$Logo.width = random 18 25.0 -- x to the right of camera
 	$Logo.length = random 15 25.0 -- y upwards
-	if shapeType == 0 then $Logo.height = random 2 20.0 -- z towards camera
+	if shapeType == "box" then $Logo.height = random 2 20.0 -- z towards camera
 
 	-- Move so it rests on table
 	pos = $Logo.pos
@@ -104,16 +111,21 @@ function randLogo =
 	$Logo.pos = pos
 
 	-- Randomize rotation
-	$Logo.rotation.z_rotation = random 70 110
+	$Logo.rotation.z_rotation = random 80 100
 
 	-- Choose a random logo bitmap texture and get its aspect ratio
-	bmt = logoBmps[random 1 logoBmps.count]
+	logoIndex = random 1 logoBmps.count
+	bmt = logoBmps[logoIndex]
 	ratio = bmt.bitmap.width as float / bmt.bitmap.height
 
 	-- Randomize logo size
+	minHeight = 6.0
 	maxHeight = $Logo.length - 0.01
 	if $Logo.width / ratio < maxHeight then maxHeight = $Logo.width / ratio
-	bmt.coords.realWorldHeight = random 6.0 maxHeight
+	if maxHeight > minHeight then 
+		bmt.coords.realWorldHeight = random minHeight maxHeight
+	else
+		bmt.coords.realWorldHeight = minHeight
 	bmt.coords.realWorldWidth = ratio * bmt.coords.realWorldHeight
 
 	-- Random logo position
@@ -124,17 +136,23 @@ function randLogo =
 	bmt.coords.U_offset = random minU maxU
 	bmt.coords.V_offset = random minV maxV
 
-	-- Random background color
-	color1 = getRandColor()
-
 	-- Put material together
-	comp.mapList[1] = colorMap solidcolor:color1
-	comp.mapList[2] = bmt
-	logoMat.diffusemap = comp
+	-- If plane, then chance for transparent background
+	rand = random 0 0
+	if shapeType == "plane" and rand == 0 then
+		logoMat.diffusemap = bmt
+	else
+	(
+		-- Random background color
+		color1 = getRandColor()
+		comp.mapList[1] = colorMap solidcolor:color1
+		comp.mapList[2] = bmt
+		logoMat.diffusemap = comp
+	)
 
-	-- Return coordinates of logo corners
+	-- Return coordinates of logo corners and logo index
 	z = 0
-	if shapeType == 0 then z = $Logo.height
+	if shapeType == "box" then z = $Logo.height
 	p1 = point3 bmt.coords.U_offset bmt.coords.V_offset z
 	p2 = point3 (bmt.coords.U_offset + bmt.coords.realWorldWidth) bmt.coords.V_offset z
 	p3 = point3 bmt.coords.U_offset (bmt.coords.V_offset + bmt.coords.realWorldHeight) z
@@ -143,7 +161,7 @@ function randLogo =
 	p2 = p2 * $Logo.transform
 	p3 = p3 * $Logo.transform
 	p4 = p4 * $Logo.transform
-	#(p1, p2, p3, p4)
+	#(p1, p2, p3, p4, logoIndex)
 )
 
 fn mapWorldToScreen thePoint camTf =
@@ -158,13 +176,14 @@ fn mapWorldToScreen thePoint camTf =
 	point3 (x_aspect*(thePos.x-screen_origin.x)) (-(y_aspect*(thePos.y-screen_origin.y))) 0
 )
 
-function saveBoundingBox corners fname =
+function saveLogoInfo logoInfo fname =
 (
 	--m = Inverse($PhysCamera001.transform) -- left handed rotation?
 	--f = $PhysCamera001.focal_length_mm
 	
 	camTf = Inverse($PhysCamera001.transform)
 	
+	corners = #(logoInfo[1], logoInfo[2], logoInfo[3], logoInfo[4])
 	out = #()
 	for c in corners do
 	(
@@ -173,7 +192,10 @@ function saveBoundingBox corners fname =
 	)
 	print fname
 	fstream = openFile fname mode:"w"
-	format "% % % %" out[1] out[2] out[3] out[4] to:fstream
+	logoPath = logoPaths[logoInfo[5]]
+	split = filterString logoPath "\\"
+	format "% % % %\n%" out[1] out[2] out[3] out[4] logoPath to:fstream
+	
 	close fstream
 )
 
@@ -196,9 +218,9 @@ function main =
 		randCam()
 		randLights()
 		randBackground()
-		corners = randLogo()
+		logoInfo = randLogo()
 		outputTxt = outputDir + "\\" + i as string + "_bb.txt"
-		saveBoundingBox corners outputTxt
+		saveLogoInfo logoInfo outputTxt
 		outputImg = outputDir + "\\" + i as string + ".jpg"
 		render camera:$PhysCamera001 outputfile:outputImg vfb:off outputSize:outputSize
 		i = i + 1
