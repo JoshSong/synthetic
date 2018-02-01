@@ -178,9 +178,9 @@ function main =
 	if getMatLibFileName() != matLibPath then loadMaterialLibrary matLibPath
 	
 	i=0
-	--while 1 do
-	--(
-		--if (keyboard.escPressed) do ( throw "ESCAPE PRESSED" )
+	while 1 do
+	(
+		if (keyboard.escPressed) do ( throw "ESCAPE PRESSED" )
 		randCam()
 		randLights()
 		randBackground()
@@ -189,8 +189,8 @@ function main =
 		saveBoundingBox corners outputTxt
 		outputImg = outputDir + "\\" + i as string + ".jpg"
 		render camera:$PhysCamera001 outputfile:outputImg vfb:off outputSize:outputSize
-		--i = i + 1
-	--)
+		i = i + 1
+	)
 )
 
 main()
