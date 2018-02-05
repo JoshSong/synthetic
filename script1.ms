@@ -126,7 +126,7 @@ function randLogo =
 	if maxHeight > minHeight then 
 		bmt.coords.realWorldHeight = random minHeight maxHeight
 	else
-		bmt.coords.realWorldHeight = minHeight
+		bmt.coords.realWorldHeight = maxHeight
 	bmt.coords.realWorldWidth = ratio * bmt.coords.realWorldHeight
 
 	-- Random logo position
