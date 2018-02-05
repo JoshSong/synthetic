@@ -10,9 +10,10 @@ makeDir outputDir
 
 tableHeight = 60
 
-matLibPath = maxFilePath + "\\mylib.mat"
+matLibPath = maxFilePath + "mylib.mat"
 
 -- Load logo images
+print "Loading logo images"
 logoDir = maxFilePath + "flickr47\\*"
 logoPaths = getFiles logoDir
 logoBmps = #()
@@ -47,7 +48,7 @@ function randCam =
 	
 	x = logo[1] + (random -10 10)
 	y = logo[2] + (random -10 10)
-	z = logo[3] + (random -5 10)
+	z = logo[3] + (random -5 5)
 	$PhysCamera001.Target.pos = [x, y, z]
 )
 
@@ -168,7 +169,113 @@ function randLogo =
 	#(p1, p2, p3, p4, logoIndex)
 )
 
-fn mapWorldToScreen thePoint camTf =
+function removeObj obj =
+(
+	obj.pos = point3 -500 -500 0
+	obj.visibility = false
+)
+
+function distPointLine x0 y0 x1 y1 x2 y2 =
+(
+	-- Return distance from point 0 to line between points 1 and 2
+	num = (y2 - y1) * x0 - (x2 - x1) * y0 + x2 * y1 - y2 * x1
+	den = sqrt((pow (y2 - y1) 2) + (pow (x2 - x1) 2))
+	abs(num) / den
+)
+
+function randObj obj = 
+(
+	obj.visibility = true
+	shapeTypes = #("box", "cone", "cylinder", "pyramid", "sphere", "teapot", "tube")
+
+	-- Choose shape
+	shapeType = shapeTypes[random 1 shapeTypes.count]
+	
+	z = tableHeight
+	if shapeType == "box" then
+	(
+		obj.baseObject = $Box001.baseObject
+		obj.width = random 4.0 20.0
+		obj.length = random 4.0 20.0
+		obj.height = random 4.0 20.0
+	)
+	if shapeType == "cone" then
+	(
+		obj.baseObject = $Cone001.baseObject
+		obj.radius1 = random 2.0 10.0
+		obj.radius2 = random 2.0 10.0
+		obj.height = random 4.0 30.0
+	)
+	if shapeType == "cylinder" then
+	(
+		obj.baseObject = $Cylinder001.baseObject
+		obj.radius = random 2.0 10.0
+		obj.height = random 4.0 30.0
+	)
+	--if shapeType == "plane" then
+	--(
+	--	obj.baseObject = $Plane001.baseObject
+	--	obj.length = random 4.0 25.0
+	--	obj.width = random 4.0 25.0
+	--	z = obj.length / 2
+	--)
+	if shapeType == "pyramid" then
+	(
+		obj.baseObject = $Pyramid001.baseObject
+		obj.width = random 4.0 40.0
+		obj.depth = random 4.0 40.0
+		obj.height = random 4.0 40.0
+	)
+	if shapeType == "sphere" then
+	(
+		obj.baseObject = $Sphere001.baseObject
+		obj.radius = random 4.0 20.0
+		z = obj.radius / 2
+	)
+	if shapeType == "teapot" then
+	(
+		obj.baseObject = $Teapot001.baseObject
+		obj.radius = random 10.0 20.0
+	)
+	if shapeType == "tube" then
+	(
+		obj.baseObject = $Tube001.baseObject
+		obj.radius1 = random 2.0 10.0
+		obj.radius2 = random 2.0 10.0
+		obj.height = random 4.0 30.0
+	)
+
+	-- Random material
+	obj.mat = currentMaterialLibrary[random 1 currentMaterialLibrary.count]
+	
+	-- Random position on table. Ensure not between camera and logo
+	x = 0
+	y = 0
+	loop = true
+	while loop do
+	(
+		x = random -50 30
+		y = random -40 40
+		d = distPointLine x y $PhysCamera001.pos[1] $PhysCamera001.pos[2] $Logo.pos[1] $Logo.pos[2]
+		if x < -30 or d > 25 then loop = false
+	)
+	obj.pos = point3 x y z
+)
+
+function randObjs =
+(
+	numObjs = 0
+	rand = random 0 100
+	if rand < 40 then numObjs = 1
+	else if rand < 70 then numObjs = 2
+	
+	if numObjs > 0 then randObj $Obj001
+	else removeObj $Obj001
+	if numObjs > 1 then randObj $Obj002
+	else removeObj $Obj002
+)
+
+function mapWorldToScreen thePoint camTf =
 (
 	local thePos = thePoint * camTf -- viewport.getTM()
 	local screenSize = outputSize
@@ -213,19 +320,31 @@ function main =
 	)
 
 	-- Load material library into currentMaterialLibrary global
-	if getMatLibFileName() != matLibPath then loadMaterialLibrary matLibPath
+	if getMatLibFileName() != matLibPath then
+	(
+		print "Loading material library"
+		loadMaterialLibrary matLibPath
+	)
 	
 	i=0
 	while 1 do
 	(
 		if (keyboard.escPressed) do ( throw "ESCAPE PRESSED" )
+		print "randCam"
 		randCam()
+		print "randLights"
 		randLights()
+		print "randBackground"
 		randBackground()
+		print "randObjs"
+		randObjs()
+		print "randLogo"
 		logoInfo = randLogo()
+		print "saveLogoInfo"
 		outputTxt = outputDir + "\\" + i as string + "_bb.txt"
 		saveLogoInfo logoInfo outputTxt
 		outputImg = outputDir + "\\" + i as string + ".jpg"
+		print "render"
 		render camera:$PhysCamera001 outputfile:outputImg vfb:off outputSize:outputSize
 		i = i + 1
 	)
