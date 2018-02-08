@@ -20,6 +20,7 @@ logoBmps = #()
 for i in logoPaths do
 (
 	bmt = bitmapTexture filename:i
+	bmt.monoOutput = 1   -- For pngs, output alpha for opacity maps
 	bmt.coords.realWorldScale = true
 	bmt.coords.mapping = 2
 	bmt.coords.U_Tile = false
@@ -139,21 +140,23 @@ function randLogo =
 
 	-- Put material together
 	-- If plane, then chance for transparent background
-	--rand = random 0 1
-	--if shapeType == "plane" and rand == 0 then
-	--(
-	--	logoMat.diffusemap = bmt
-	--	logoMat.opacityMap = bmt
-	--)
-	--else
-	--(
+	rand = random 0 2
+	split = filterString logoPaths[logoIndex] "."
+	isPng = split[split.count] == "png"
+	if shapeType == "plane" and rand == 0 and isPng then
+	(
+		logoMat.diffusemap = bmt
+		logoMat.opacityMap = bmt
+	)
+	else
+	(
 		-- Random background color
 		color1 = getRandColor()
 		comp.mapList[1] = colorMap solidcolor:color1
 		comp.mapList[2] = bmt
 		logoMat.diffusemap = comp
 		logoMat.opacityMap = undefined
-	--)
+	)
 
 	-- Return coordinates of logo corners and logo index
 	z = 0
