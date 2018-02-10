@@ -12,6 +12,9 @@ tableHeight = 60
 
 matLibPath = maxFilePath + "mylib.mat"
 
+artRenderer = RendererClass.classes[5]()
+scanlineRenderer = RendererClass.classes[1]()
+
 -- Load logo images
 print "Loading logo images"
 logoDir = maxFilePath + "flickr47\\*"
@@ -94,12 +97,12 @@ function randLogo =
 	if rand < 20 then
 	(
 		shapeType = "plane"
-		$Logo.baseObject = $Plane001.baseObject
+		$Logo.baseObject = copy $Plane001.baseObject
 	)
 	else
 	(
 		shapeType = "box"
-		$Logo.baseObject = $Box001.baseObject
+		$Logo.baseObject = copy $Box001.baseObject
 	)
 	
 	-- Randomize size
@@ -197,52 +200,52 @@ function randObj obj =
 	z = tableHeight
 	if shapeType == "box" then
 	(
-		obj.baseObject = $Box001.baseObject
+		obj.baseObject = copy $Box001.baseObject
 		obj.width = random 4.0 20.0
 		obj.length = random 4.0 20.0
 		obj.height = random 4.0 20.0
 	)
 	if shapeType == "cone" then
 	(
-		obj.baseObject = $Cone001.baseObject
+		obj.baseObject = copy $Cone001.baseObject
 		obj.radius1 = random 2.0 10.0
 		obj.radius2 = random 2.0 10.0
 		obj.height = random 4.0 30.0
 	)
 	if shapeType == "cylinder" then
 	(
-		obj.baseObject = $Cylinder001.baseObject
+		obj.baseObject = copy $Cylinder001.baseObject
 		obj.radius = random 2.0 10.0
 		obj.height = random 4.0 30.0
 	)
 	--if shapeType == "plane" then
 	--(
-	--	obj.baseObject = $Plane001.baseObject
+	--	obj.baseObject = copy $Plane001.baseObject
 	--	obj.length = random 4.0 25.0
 	--	obj.width = random 4.0 25.0
 	--	z = obj.length / 2
 	--)
 	if shapeType == "pyramid" then
 	(
-		obj.baseObject = $Pyramid001.baseObject
+		obj.baseObject = copy $Pyramid001.baseObject
 		obj.width = random 4.0 40.0
 		obj.depth = random 4.0 40.0
 		obj.height = random 4.0 40.0
 	)
 	if shapeType == "sphere" then
 	(
-		obj.baseObject = $Sphere001.baseObject
+		obj.baseObject = copy $Sphere001.baseObject
 		obj.radius = random 4.0 20.0
 		z = obj.radius / 2
 	)
 	if shapeType == "teapot" then
 	(
-		obj.baseObject = $Teapot001.baseObject
+		obj.baseObject = copy $Teapot001.baseObject
 		obj.radius = random 10.0 20.0
 	)
 	if shapeType == "tube" then
 	(
-		obj.baseObject = $Tube001.baseObject
+		obj.baseObject = copy $Tube001.baseObject
 		obj.radius1 = random 2.0 10.0
 		obj.radius2 = random 2.0 10.0
 		obj.height = random 4.0 30.0
@@ -313,12 +316,50 @@ function saveLogoInfo logoInfo fname =
 	close fstream
 )
 
+function renderCam i logoInfo =
+(
+	-- Render masks
+	-- Enable elements and set output path
+	/*
+	outputPath = outputDir + "\\" + i as string + "_scanline.jpg"
+	renderers.current = scanlineRenderer
+	re = maxOps.GetCurRenderElementMgr()
+	elem = re.GetRenderElement 0
+	elemPath = outputDir + "\\" + i as string + "_mask.bmp"
+	re.SetRenderElementFilename 0 elemPath
+	re.SetElementsActive true
+	
+	-- Render only logo object
+	select $Logo
+	
+	-- The arbitrarily chosen RenderElement layer is specular
+	logoIndex = logoInfo[5]
+	bmt = copy logoBmps[logoIndex]
+	prev = logoMat.specularLevelMap 
+	logoMat.specularLevelMap  = copy bmt
+
+	render camera:$PhysCamera001 outputfile:outputPath vfb:off outputSize:outputSize renderElement:true renderType:#selected
+	logoMat.specularLevelMap = prev
+	*/
+
+	-- Render rgb
+	outputPath = outputDir + "\\" + i as string + ".jpg"
+	renderers.current = artRenderer
+	re.SetElementsActive false
+	render camera:$PhysCamera001 outputfile:outputPath vfb:off outputSize:outputSize renderElement:false renderType:#view	
+)
+
 function main =
 (
 	
 	if getActiveCamera()!=$PhysCamera001 then
 	(
 		messagebox "Active viewport must use camera"
+		return -1
+	)
+	if artRenderer as string != "ART_Renderer:ART_Renderer" or scanlineRenderer as string != "Default_Scanline_Renderer:Default_Scanline_Renderer" then
+	(
+		messagebox "Check renderer index"
 		return -1
 	)
 
@@ -346,9 +387,8 @@ function main =
 		print "saveLogoInfo"
 		outputTxt = outputDir + "\\" + i as string + "_bb.txt"
 		saveLogoInfo logoInfo outputTxt
-		outputImg = outputDir + "\\" + i as string + ".jpg"
-		print "render"
-		render camera:$PhysCamera001 outputfile:outputImg vfb:off outputSize:outputSize
+		print "renderCam"
+		renderCam i logoInfo
 		i = i + 1
 	)
 )
