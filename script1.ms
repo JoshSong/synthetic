@@ -90,42 +90,76 @@ function getRandColor =
 
 function randLogo =
 (
-	-- Choose shape
-	shapeType = ""
-	rand = random 0 100
-	if rand < 20 then
-	(
-		shapeType = "plane"
-		$Logo.baseObject = copy $Plane001.baseObject
-	)
-	else
-	(
-		shapeType = "box"
-		$Logo.baseObject = copy $Box001.baseObject
-	)
-	
-	-- Randomize size
-	$Logo.width = random 18 25.0 -- x to the right of camera
-	$Logo.length = random 15 25.0 -- y upwards
-	if shapeType == "box" then $Logo.height = random 2 20.0 -- z towards camera
-
-	-- Move so it rests on table
-	pos = $Logo.pos
-	pos[3] = tableHeight + $Logo.length/2
-	$Logo.pos = pos
-
-	-- Randomize rotation
-	$Logo.rotation.z_rotation = random 80 100
-
 	-- Choose a random logo bitmap texture and get its aspect ratio
 	logoIndex = random 1 logoPngs.count
 	bmt = logoPngs[logoIndex]
 	ratio = bmt.bitmap.width as float / bmt.bitmap.height
 
-	-- Randomize logo size
+	-- Logo image size limits
 	minHeight = 6.0
-	maxHeight = $Logo.length - 0.1
-	maxHeight2 =  ($Logo.width / ratio) - 0.1
+	maxHeight = maxHeight2 = maxU = minU = maxV = minV = minC = maxC = -1
+
+	-- Choose shape
+	shapeTypes = #("plane", "box", "cylinder")
+	shapeType = shapeTypes[random 1 shapeTypes.count]
+
+	if shapeType == "plane" then
+	(
+		$Logo.baseObject = copy $Plane001.baseObject
+		$Logo.rotation.x_rotation = 90 -- rotate to align material
+		$Logo.width = random 18 25.0 -- x to the right of camera
+		$Logo.length = random 15 25.0 -- y upwards
+		
+		$Logo.modifiers[1].mapType = 0 -- Planar uvw map
+		$Logo.modifiers[1].u_tile = 1
+		
+		$Logo.pos.z = tableHeight + $Logo.length/2
+		maxHeight = $Logo.length - 0.2
+		maxHeight2 =  ($Logo.width / ratio) - 0.2
+	)
+	else if shapeType == "box" then
+	(
+		$Logo.baseObject = copy $Box001.baseObject
+		$Logo.rotation.x_rotation = 90 -- rotate to align material
+		$Logo.width = random 18 25.0 -- x to the right of camera
+		$Logo.length = random 15 25.0 -- y upwards
+		$Logo.height = random 2 20.0 -- z towards camera
+		
+		$Logo.modifiers[1].mapType = 0 -- Planar uvw map
+		$Logo.modifiers[1].u_tile = 1
+		
+		$Logo.pos.z = tableHeight + $Logo.length/2
+		maxHeight = $Logo.length - 0.2
+		maxHeight2 =  ($Logo.width / ratio) - 0.2
+	)
+	else if shapeType == "cylinder" then
+	(
+		$Logo.baseObject = copy $Cylinder001.baseObject
+		$Logo.rotation.x_rotation = 0
+		$Logo.radius = random 10 20
+		$Logo.height = random 15 25
+		$Logo.pos.z = tableHeight
+		
+		circumference = 2 * pi * $Logo.radius
+		$Logo.modifiers[1].mapType = 1 -- Cylindrical uvw map
+		$Logo.modifiers[1].u_tile = circumference
+		
+		maxHeight = $Logo.height - 0.2
+		
+		-- Position logo randomly between 40% and 60% of circumference
+		maxC = 0.6 * circumference
+		minC = 0.4 * circumference
+		maxHeight2 =  (maxC - minC) / ratio
+	)
+	
+	-- Set UV map gizmo to origin
+	$Logo.modifiers[1].gizmo.pos = point3 0 0 0
+	$Logo.modifiers[1].gizmo.rotation = quat 0 0 -1 0
+
+	-- Randomize rotation
+	$Logo.rotation.z_rotation = random 80 100
+
+	-- Randomize logo size	
 	if maxHeight2 < maxHeight then maxHeight = maxHeight2
 	if maxHeight > minHeight then 
 		bmt.coords.realWorldHeight = random minHeight maxHeight
@@ -133,11 +167,21 @@ function randLogo =
 		bmt.coords.realWorldHeight = maxHeight
 	bmt.coords.realWorldWidth = ratio * bmt.coords.realWorldHeight
 
-	-- Random logo position
-	maxU = $Logo.width/2 - bmt.coords.realWorldWidth - 0.1
-	minU = -$Logo.width/2 + 0.1
-	maxV = $Logo.length/2 - bmt.coords.realWorldHeight - 0.1
-	minV = -$Logo.length/2 + 0.1
+	-- Calculate bounds then randomize logo position
+	if shapeType == "box" or shapeType == "plane" then
+	(
+		maxU = $Logo.width/2 - bmt.coords.realWorldWidth - 0.2
+		minU = -$Logo.width/2 + 0.2
+		maxV = $Logo.length/2 - bmt.coords.realWorldHeight - 0.2
+		minV = -$Logo.length/2 + 0.2
+	)
+	else if shapeType == "cylinder" then
+	(
+		maxU = maxC - bmt.coords.realWorldWidth
+		minU = minC
+		maxV = $Logo.height - bmt.coords.realWorldHeight - 0.2
+		minV = 0
+	)
 	bmt.coords.U_offset = random minU maxU
 	bmt.coords.V_offset = random minV maxV
 
