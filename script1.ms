@@ -19,16 +19,15 @@ scanlineRenderer = RendererClass.classes[1]()
 print "Loading logo images"
 logoDir = maxFilePath + "flickr47\\*"
 logoPaths = getFiles logoDir
-logoBmps = #()
+logoPngs = #()
 for i in logoPaths do
 (
 	bmt = bitmapTexture filename:i
-	bmt.monoOutput = 1   -- For pngs, output alpha for opacity maps
+	bmt.monoOutput = 1 -- output alpha for opacity maps
 	bmt.coords.realWorldScale = true
-	bmt.coords.mapping = 2
 	bmt.coords.U_Tile = false
 	bmt.coords.V_Tile = false
-	append logoBmps bmt
+	append logoPngs bmt
 )
 
 -- The texture/material for the logo object
@@ -119,14 +118,15 @@ function randLogo =
 	$Logo.rotation.z_rotation = random 80 100
 
 	-- Choose a random logo bitmap texture and get its aspect ratio
-	logoIndex = random 1 logoBmps.count
-	bmt = logoBmps[logoIndex]
+	logoIndex = random 1 logoPngs.count
+	bmt = logoPngs[logoIndex]
 	ratio = bmt.bitmap.width as float / bmt.bitmap.height
 
 	-- Randomize logo size
 	minHeight = 6.0
-	maxHeight = $Logo.length - 0.01
-	if $Logo.width / ratio < maxHeight then maxHeight = $Logo.width / ratio
+	maxHeight = $Logo.length - 0.1
+	maxHeight2 =  ($Logo.width / ratio) - 0.1
+	if maxHeight2 < maxHeight then maxHeight = maxHeight2
 	if maxHeight > minHeight then 
 		bmt.coords.realWorldHeight = random minHeight maxHeight
 	else
@@ -134,19 +134,17 @@ function randLogo =
 	bmt.coords.realWorldWidth = ratio * bmt.coords.realWorldHeight
 
 	-- Random logo position
-	maxU = $Logo.width/2 - bmt.coords.realWorldWidth - 0.01
-	minU = -$Logo.width/2 + 0.01
-	maxV = $Logo.length/2 - bmt.coords.realWorldHeight - 0.01
-	minV = -$Logo.length/2 + 0.01
+	maxU = $Logo.width/2 - bmt.coords.realWorldWidth - 0.1
+	minU = -$Logo.width/2 + 0.1
+	maxV = $Logo.length/2 - bmt.coords.realWorldHeight - 0.1
+	minV = -$Logo.length/2 + 0.1
 	bmt.coords.U_offset = random minU maxU
 	bmt.coords.V_offset = random minV maxV
 
 	-- Put material together
 	-- If plane, then chance for transparent background
 	rand = random 0 2
-	split = filterString logoPaths[logoIndex] "."
-	isPng = split[split.count] == "png"
-	if shapeType == "plane" and rand == 0 and isPng then
+	if shapeType == "plane" and rand == 0 then
 	(
 		logoMat.diffusemap = bmt
 		logoMat.opacityMap = bmt
@@ -320,7 +318,6 @@ function renderCam i logoInfo =
 (
 	-- Render masks
 	-- Enable elements and set output path
-	/*
 	outputPath = outputDir + "\\" + i as string + "_scanline.jpg"
 	renderers.current = scanlineRenderer
 	re = maxOps.GetCurRenderElementMgr()
@@ -332,21 +329,19 @@ function renderCam i logoInfo =
 	-- Render only logo object
 	select $Logo
 	
-	-- The arbitrarily chosen RenderElement layer is specular
+	-- Set to opacityMap, render alpha element
 	logoIndex = logoInfo[5]
-	bmt = copy logoBmps[logoIndex]
-	prev = logoMat.specularLevelMap 
-	logoMat.specularLevelMap  = copy bmt
+	prev = logoMat.opacityMap 
+	logoMat.opacityMap  = copy logoPngs[logoIndex]
 
 	render camera:$PhysCamera001 outputfile:outputPath vfb:off outputSize:outputSize renderElement:true renderType:#selected
-	logoMat.specularLevelMap = prev
-	*/
+	logoMat.opacityMap = prev
 
 	-- Render rgb
 	outputPath = outputDir + "\\" + i as string + ".jpg"
 	renderers.current = artRenderer
 	re.SetElementsActive false
-	render camera:$PhysCamera001 outputfile:outputPath vfb:off outputSize:outputSize renderElement:false renderType:#view	
+	render camera:$PhysCamera001 outputfile:outputPath vfb:off outputSize:outputSize renderElement:false renderType:#view
 )
 
 function main =
