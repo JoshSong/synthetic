@@ -170,6 +170,7 @@ function randLogo =
 		
 		circumference = 2 * pi * $Logo.radius
 		$Logo.modifiers[1].mapType = 1 -- Cylindrical uvw map
+		$Logo.modifiers[1].cap = true
 		$Logo.modifiers[1].u_tile = circumference
 		
 		maxHeight = $Logo.height - 0.2
