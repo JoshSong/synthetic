@@ -1,12 +1,15 @@
 "Start"
 
 outputSize = point2 640 480
-matLib
 
 stamp =  timeStamp()
 seed stamp
 outputDir = maxFilePath + "output\\" + stamp as string
 makeDir outputDir
+
+-- Create log file
+logPath = outputDir + "\\log.txt"
+logStream = openFile logPath mode:"w"
 
 tableHeight = 60
 
@@ -30,10 +33,27 @@ for i in logoPaths do
 	append logoPngs bmt
 )
 
+-- Load bump texture images
+print "Loading bump images"
+bumpDir = maxFilePath + "bump\\*"
+bumpPaths = getFiles bumpDir
+bumpImgs = #()
+for i in bumpPaths do
+(
+	bmt = bitmapTexture filename:i
+	bmt.coords.realWorldScale = true
+	bmt.coords.realWorldHeight = 20
+	ratio = bmt.bitmap.width as float / bmt.bitmap.height
+	bmt.coords.realWorldWidth = ratio * bmt.coords.realWorldHeight
+	bmt.coords.blur = 0.5
+	append bumpImgs bmt
+)
+
 -- The texture/material for the logo object
 comp = compositeTexture()
 comp.add()
-logoMat = standardMaterial()
+logoStandardMat = standardMaterial()
+logoMat = physicalMaterial()
 $Logo.material = logoMat
 
 function randCam =
@@ -53,6 +73,7 @@ function randCam =
 	y = logo[2] + (random -10 10)
 	z = logo[3] + (random -5 5)
 	$PhysCamera001.Target.pos = [x, y, z]
+	format "Cam pos % target %\n" $PhysCamera001.pos $PhysCamera001.Target.pos to:logStream
 )
 
 function randLights =
@@ -66,8 +87,10 @@ function randLights =
 		i.pos = [x, y, z]
 		i.intensity = random 400 800
 		i.kelvin = random 3000 10000
+		format "Light %: pos % intensity % kelvin %\n" i i.pos i.intensity i.kelvin to:logStream
 	)
 	all[2].enabled = random 0 3 > 0
+	format "Light 2 enabled %\n" all[2].enabled to:logStream
 )
 
 function randBackground = 
@@ -78,6 +101,7 @@ function randBackground =
 	$Wall2.mat = mat2
 	$Wall3.mat = mat2
 	$Wall4.mat = mat2
+	format "Table mat: %. Wall mat: %\n" $Table.mat mat2 to:logStream
 )
 
 function getRandColor = 
@@ -94,6 +118,7 @@ function randLogo =
 	logoIndex = random 1 logoPngs.count
 	bmt = logoPngs[logoIndex]
 	ratio = bmt.bitmap.width as float / bmt.bitmap.height
+	format "Logo path %\n" bmt.fileName to:logStream
 
 	-- Logo image size limits
 	minHeight = 7.0
@@ -102,6 +127,7 @@ function randLogo =
 	-- Choose shape
 	shapeTypes = #("plane", "box", "cylinder")
 	shapeType = shapeTypes[random 1 shapeTypes.count]
+	format "shapeType %\n" shapeType to:logStream
 
 	if shapeType == "plane" then
 	(
@@ -116,6 +142,7 @@ function randLogo =
 		$Logo.pos.z = tableHeight + $Logo.length/2
 		maxHeight = $Logo.length - 0.2
 		maxHeight2 =  ($Logo.width / ratio) - 0.2
+		format "Width % length %\n" $Logo.width $Logo.length to:logStream
 	)
 	else if shapeType == "box" then
 	(
@@ -131,6 +158,7 @@ function randLogo =
 		$Logo.pos.z = tableHeight + $Logo.length/2
 		maxHeight = $Logo.length - 0.2
 		maxHeight2 =  ($Logo.width / ratio) - 0.2
+		format "Width % length % height %\n" $Logo.width $Logo.length $Logo.height to:logStream
 	)
 	else if shapeType == "cylinder" then
 	(
@@ -150,6 +178,7 @@ function randLogo =
 		maxC = 0.6 * circumference
 		minC = 0.4 * circumference
 		maxHeight2 =  (maxC - minC) / ratio
+		format "Radius % height %\n" $Logo.radius $Logo.height to:logStream
 	)
 	
 	-- Set UV map gizmo to origin
@@ -158,6 +187,7 @@ function randLogo =
 
 	-- Randomize rotation
 	$Logo.rotation.z_rotation = random 80 100
+	format "z_rotation %\n" $Logo.rotation.z_rotation to:logStream
 
 	-- Randomize logo size	
 	if maxHeight2 < maxHeight then maxHeight = maxHeight2
@@ -166,6 +196,7 @@ function randLogo =
 	else
 		bmt.coords.realWorldHeight = maxHeight
 	bmt.coords.realWorldWidth = ratio * bmt.coords.realWorldHeight
+	format "Logo bitmap height % width %\n" bmt.coords.realWorldHeight bmt.coords.realWorldHeight to:logStream
 
 	-- Calculate bounds then randomize logo position
 	if shapeType == "box" or shapeType == "plane" then
@@ -184,14 +215,17 @@ function randLogo =
 	)
 	bmt.coords.U_offset = random minU maxU
 	bmt.coords.V_offset = random minV maxV
+	format "Logo bitmap U_offset % V_offset %\n" bmt.coords.U_offset bmt.coords.V_offset to:logStream
 
 	-- Put material together
 	-- If plane, then chance for transparent background
 	rand = random 0 2
 	if shapeType == "plane" and rand == 0 then
 	(
-		logoMat.diffusemap = bmt
-		logoMat.opacityMap = bmt
+		logoStandardMat.diffuseMap = bmt
+		logoStandardMat.opacityMap = bmt
+		$Logo.material = logoStandardMat
+		format "Transparent plane\n" to:logStream
 	)
 	else
 	(
@@ -199,8 +233,25 @@ function randLogo =
 		color1 = getRandColor()
 		comp.mapList[1] = colorMap solidcolor:color1
 		comp.mapList[2] = bmt
-		logoMat.diffusemap = comp
-		logoMat.opacityMap = undefined
+		logoMat.base_color_map = comp
+		format "Logo background color %\n" color1 to:logStream
+	
+		-- Random bump map
+		if random 0 1 == 0 then
+		(
+			logoMat.bump_map_amt = random 0.5 1.0
+			logoMat.bump_map = bumpImgs[random 1 bumpImgs.count]
+			format "Bump map % amount %\n" logoMat.bump_map.fileName logoMat.bump_map_amt to:logStream
+		)
+		else logoMat.bump_map = undefined
+		
+		-- Randomize other material properties
+		if random 0 2 == 0 then logoMat.metalness = random 0.1 1.0
+		else logoMat.metalness = 0.0
+		logoMat.roughness = random 0.0 1.0
+		format "Metalness % roughness %\n" logoMat.metalness logoMat.roughness to:logStream
+		
+		$Logo.material = logoMat
 	)
 
 	-- Return coordinates of logo corners and logo index
@@ -308,6 +359,7 @@ function randObj obj =
 		if x < -30 or d > 25 then loop = false
 	)
 	obj.pos = point3 x y z
+	format "randObj pos % shape % mat %\n" obj.pos shapeType obj.mat to:logStream
 )
 
 function randObjs =
@@ -317,6 +369,7 @@ function randObjs =
 	if rand < 40 then numObjs = 1
 	else if rand < 70 then numObjs = 2
 	
+	format "Number of rand objects: %\n" numObjs to:logStream
 	if numObjs > 0 then randObj $Obj001
 	else removeObj $Obj001
 	if numObjs > 1 then randObj $Obj002
@@ -375,11 +428,10 @@ function renderCam i logoInfo =
 	
 	-- Set to opacityMap, render alpha element
 	logoIndex = logoInfo[5]
-	prev = logoMat.opacityMap 
-	logoMat.opacityMap  = copy logoPngs[logoIndex]
-
+	tempMat = standardMaterial opacityMap:logoPngs[logoIndex]
+	$Logo.material = tempMat
 	render camera:$PhysCamera001 outputfile:outputPath vfb:off outputSize:outputSize renderElement:true renderType:#selected
-	logoMat.opacityMap = prev
+	$Logo.material = logoMat
 
 	-- Render rgb
 	outputPath = outputDir + "\\" + i as string + ".jpg"
@@ -412,7 +464,8 @@ function main =
 	i=0
 	while 1 do
 	(
-		if (keyboard.escPressed) do ( throw "ESCAPE PRESSED" )
+		format "\n\nIteration %\n" i to:logStream
+		if keyboard.escPressed do exit
 		print "randCam"
 		randCam()
 		print "randLights"
@@ -430,6 +483,8 @@ function main =
 		renderCam i logoInfo
 		i = i + 1
 	)
+
+	close logStream
 )
 
 main()
