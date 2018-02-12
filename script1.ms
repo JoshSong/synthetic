@@ -43,8 +43,8 @@ function randCam =
 	x = logo[1] + (random 10 40)
 	y = logo[2]
 	z = logo[3] + (random 10 40)
-	dist = random 50 100
-	theta = random -45 45
+	dist = random 50 90
+	theta = random -35 35
 	x = x + dist * cos(theta)
 	y = y + dist * sin(theta)
 	$PhysCamera001.pos = [x, y, z]
@@ -96,7 +96,7 @@ function randLogo =
 	ratio = bmt.bitmap.width as float / bmt.bitmap.height
 
 	-- Logo image size limits
-	minHeight = 6.0
+	minHeight = 7.0
 	maxHeight = maxHeight2 = maxU = minU = maxV = minV = minC = maxC = -1
 
 	-- Choose shape
