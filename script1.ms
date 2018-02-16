@@ -430,9 +430,10 @@ function renderCam i logoInfo =
 	-- Set to opacityMap, render alpha element
 	logoIndex = logoInfo[5]
 	tempMat = standardMaterial opacityMap:logoPngs[logoIndex]
+	prevMat = $Logo.material
 	$Logo.material = tempMat
 	render camera:$PhysCamera001 outputfile:outputPath vfb:off outputSize:outputSize renderElement:true renderType:#selected
-	$Logo.material = logoMat
+	$Logo.material = prevMat
 
 	-- Render rgb
 	outputPath = outputDir + "\\" + i as string + ".jpg"
