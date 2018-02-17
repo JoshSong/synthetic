@@ -4,6 +4,7 @@ import json
 import math
 import numpy as np
 import cv2
+import re
 
 label_map_path = 'flickr47_label_map.pbtxt'
 extensions = ['jpg']
@@ -57,7 +58,7 @@ def read_info(path):
             y0 = min(y0, l[1])
             y1 = max(y1, l[1])
         """
-        mask_path = path.rsplit('.', 1)[0] + '_mask.bmp'
+        mask_path = re.split('[._]', path)[0] + '_mask.bmp'
         x0, y0, x1, y1 = get_bbox_from_mask(mask_path)
 
         # Read logo name
@@ -77,7 +78,8 @@ def get_bbox_from_mask(path):
     # Need to get rid of weird cylinder bug. Dilate and use contour detection
     kernel = np.ones((15, 15), np.uint8)
     img = cv2.morphologyEx(img, cv2.MORPH_CLOSE, kernel)
-    im2, contours, hierarchy = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    #im2, contours, hierarchy = cv2.findContours(img, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    contours, hierarchy = cv2.findContours(img, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
     # Return largest bounding box
     area = -1
@@ -90,14 +92,17 @@ def get_bbox_from_mask(path):
 
 def combine_subdirs(input_dir, output_path):
     # Get list of paths to all images under input_dir
+    print 'Getting image paths'
     img_paths = []
     for root, dirs, files in os.walk(input_dir):
         for f in files:
             s = f.rsplit('.', 1)
-            if len(s) > 1 and s[1] in extensions:
+            if len(s) > 1 and s[1] in extensions and s[0].isdigit():
                 img_paths.append(os.path.join(root, f))
+    print 'Done'
 
     # Collect bounding box and label info
+    i = 0
     all_info = {}
     for img_path in img_paths:
         s = img_path.rsplit('.', 1)
@@ -106,6 +111,9 @@ def combine_subdirs(input_dir, output_path):
             all_info[img_path] = read_info(info_path)
         else:
             print info_path + ' does not exist, skipping'
+        i += 1
+        if i % 100 == 0:
+            print '{}/{} done'.format(i, len(img_paths))
 
     # Save json to output_path
     with open(output_path, 'w') as fp:
