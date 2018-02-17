@@ -1,6 +1,9 @@
 import os
 import sys
 import json
+import math
+import numpy as np
+import cv2
 
 label_map_path = 'flickr47_label_map.pbtxt'
 extensions = ['jpg']
@@ -37,11 +40,11 @@ def get_label_from_filename(fname):
         name = old_map[name]
     return name
 
-
 def read_info(path):
     with open(path) as fp:
         # Read bounding box points
         line = fp.readline()
+        """
         split = line.split()
         x0 = 9999
         y0 = 9999
@@ -53,6 +56,9 @@ def read_info(path):
             x1 = max(x1, l[0])
             y0 = min(y0, l[1])
             y1 = max(y1, l[1])
+        """
+        mask_path = path.rsplit('.', 1)[0] + '_mask.bmp'
+        x0, y0, x1, y1 = get_bbox_from_mask(mask_path)
 
         # Read logo name
         logo_fname = fp.readline().strip()
@@ -60,6 +66,27 @@ def read_info(path):
         label_id = label_map[label_name]
         return {'bboxes': [[x0, y0, x1, y1]], 'label_names': [label_name], 'label_ids': [label_id]}
 
+def dist(p1, p2):
+    dx = p1[0] - p2[0]
+    dy = p1[1] - p2[1]
+    return math.sqrt(dx*dx + dy*dy)
+
+def get_bbox_from_mask(path):
+    img = cv2.imread(path, 0)
+
+    # Need to get rid of weird cylinder bug. Dilate and use contour detection
+    kernel = np.ones((15, 15), np.uint8)
+    img = cv2.morphologyEx(img, cv2.MORPH_CLOSE, kernel)
+    im2, contours, hierarchy = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+    # Return largest bounding box
+    area = -1
+    for c in contours:
+        tx, ty, tw, th = cv2.boundingRect(c)
+        if tw * th > area:
+            area = tw * th
+            x, y, w, h = tx, ty, tw, th
+    return [x, y, x + w, y + h]
 
 def combine_subdirs(input_dir, output_path):
     # Get list of paths to all images under input_dir
