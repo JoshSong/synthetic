@@ -17,7 +17,7 @@ def get_label_map(label_map_path):
     input = label_map_util.load_labelmap(label_map_path)
     label_map = {}
     for i in input.item:
-        label_map[i.display_name] = int(i.name)
+        label_map[i.display_name] = i.id
     return label_map
 label_map = get_label_map(label_map_path)
 
@@ -34,7 +34,9 @@ def get_label_from_filename(fname):
         'esso': 'esso_symbol',
         'fosters': 'fosters_symbol',
         'stella_artois_0': 'stellaartois_symbol',
-        'stella_artois_1': 'stellaartois_symbol'
+        'stella_artois_1': 'stellaartois_symbol',
+        'pepsi_0': 'pepsi_symbol',
+        'pepsi_1': 'pepsi_symbol'
     }
     name = fname.rsplit('.', 1)[0]
     if name in old_map:
@@ -58,8 +60,16 @@ def read_info(path):
             y0 = min(y0, l[1])
             y1 = max(y1, l[1])
         """
-        mask_path = re.split('[._]', path)[0] + '_mask.bmp'
-        x0, y0, x1, y1 = get_bbox_from_mask(mask_path)
+        name = os.path.basename(path)
+        mask_name = re.split('[._]', name)[0] + '_mask.bmp'
+        mask_path = os.path.join(os.path.dirname(path), mask_name)
+        if not os.path.isfile(mask_path):
+            print 'WARNING: {} does not exist'.format(mask_path)
+            return None
+        bbox = get_bbox_from_mask(mask_path)
+        if bbox is None:
+            return None
+        x0, y0, x1, y1 = bbox
 
         # Read logo name
         logo_fname = fp.readline().strip()
@@ -81,6 +91,10 @@ def get_bbox_from_mask(path):
     #im2, contours, hierarchy = cv2.findContours(img, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     contours, hierarchy = cv2.findContours(img, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
+    if len(contours) == 0:
+        print 'WARNING: no contours found for {}'.format(path)
+        return None
+
     # Return largest bounding box
     area = -1
     for c in contours:
@@ -92,7 +106,6 @@ def get_bbox_from_mask(path):
 
 def combine_subdirs(input_dir, output_path):
     # Get list of paths to all images under input_dir
-    print 'Getting image paths'
     img_paths = []
     for root, dirs, files in os.walk(input_dir):
         for f in files:
@@ -108,7 +121,9 @@ def combine_subdirs(input_dir, output_path):
         s = img_path.rsplit('.', 1)
         info_path = s[0] + '_bb.txt'
         if os.path.isfile(info_path):
-            all_info[img_path] = read_info(info_path)
+            info = read_info(info_path)
+            if info is not None:
+                all_info[img_path] = info
         else:
             print info_path + ' does not exist, skipping'
         i += 1
