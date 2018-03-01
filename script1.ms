@@ -1,6 +1,6 @@
 "Start"
 
-outputSize = point2 640 480
+outputSize = point2 640 480	-- can change during runtime
 
 stamp =  timeStamp()
 seed stamp
@@ -11,16 +11,19 @@ makeDir outputDir
 logPath = outputDir + "\\log.txt"
 logStream = openFile logPath mode:"w"
 
-tableHeight = 60
+tableHeight = 60 -- must match true table height
 
 matLibPath = maxFilePath + "mylib.mat"
 
 artRenderer = RendererClass.classes[5]()
 scanlineRenderer = RendererClass.classes[1]()
 
+rendererName = "scanline"
+
 -- Load logo images
 print "Loading logo images"
-logoDir = maxFilePath + "flickr47\\*"
+--logoDir = maxFilePath + "flickr47\\*"
+logoDir = maxFilePath + "dettol_pringles\\*"
 logoPaths = getFiles logoDir
 logoPngs = #()
 for i in logoPaths do
@@ -60,18 +63,18 @@ function randCam =
 (
 	logo = $Logo.pos
 	
-	x = logo[1] + (random 10 40)
+	x = logo[1] + (random 12 30)
 	y = logo[2]
-	z = logo[3] + (random 10 40)
-	dist = random 50 90
-	theta = random -35 35
+	z = logo[3] + (random 10 30)
+	dist = random 40 60
+	theta = random -30 30
 	x = x + dist * cos(theta)
 	y = y + dist * sin(theta)
 	$PhysCamera001.pos = [x, y, z]
 	
-	x = logo[1] + (random -10 10)
-	y = logo[2] + (random -10 10)
-	z = logo[3] + (random -5 5)
+	x = logo[1] + (random -5 5)
+	y = logo[2] + (random -5 5)
+	z = logo[3] + (random -3 3)
 	$PhysCamera001.Target.pos = [x, y, z]
 	format "Cam pos % target %\n" $PhysCamera001.pos $PhysCamera001.Target.pos to:logStream
 )
@@ -121,7 +124,7 @@ function randLogo =
 	format "Logo path %\n" bmt.fileName to:logStream
 
 	-- Logo image size limits
-	minHeight = 7.0
+	minHeight = 8.0
 	maxHeight = maxHeight2 = maxU = minU = maxV = minV = minC = maxC = -1
 
 	-- Choose shape
@@ -197,7 +200,7 @@ function randLogo =
 	else
 		bmt.coords.realWorldHeight = maxHeight
 	bmt.coords.realWorldWidth = ratio * bmt.coords.realWorldHeight
-	format "Logo bitmap height % width %\n" bmt.coords.realWorldHeight bmt.coords.realWorldHeight to:logStream
+	format "Logo bitmap height % width %\n" bmt.coords.realWorldHeight bmt.coords.realWorldWidth to:logStream
 
 	-- Calculate bounds then randomize logo position
 	if shapeType == "box" or shapeType == "plane" then
@@ -437,7 +440,10 @@ function renderCam i logoInfo =
 
 	-- Render rgb
 	outputPath = outputDir + "\\" + i as string + ".jpg"
-	renderers.current = artRenderer
+	format "Renderer name: %\n" rendererName to:logStream
+	if rendererName == "art" then renderers.current = artRenderer
+	else if rendererName == "scanline" then renderers.current = scanlineRenderer
+	else print "ERROR: Invalid rendererName."
 	re.SetElementsActive false
 	render camera:$PhysCamera001 outputfile:outputPath vfb:off outputSize:outputSize renderElement:false renderType:#view
 )
@@ -478,6 +484,10 @@ function main =
 		randObjs()
 		print "randLogo"
 		logoInfo = randLogo()
+		print "randOutputSize"
+		sizes = #(300, 350, 400)
+		outputSize = point2 sizes[random 1 sizes.count] sizes[random 1 sizes.count]
+		format "Output size: %\n" outputSize to:logStream
 		print "saveLogoInfo"
 		outputTxt = outputDir + "\\" + i as string + "_bb.txt"
 		saveLogoInfo logoInfo outputTxt
