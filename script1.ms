@@ -22,8 +22,8 @@ rendererName = "scanline"
 
 -- Load logo images
 print "Loading logo images"
---logoDir = maxFilePath + "flickr47\\*"
-logoDir = maxFilePath + "dettol_pringles\\*"
+logoDir = maxFilePath + "flickr47\\*"
+--logoDir = maxFilePath + "dettol_pringles\\*"
 logoPaths = getFiles logoDir
 logoPngs = #()
 for i in logoPaths do
@@ -470,7 +470,7 @@ function main =
 	)
 	
 	i=0
-	while 1 do
+	while i < 100000 do
 	(
 		format "\n\nIteration %\n" i to:logStream
 		if keyboard.escPressed do exit
