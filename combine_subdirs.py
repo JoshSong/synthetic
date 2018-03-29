@@ -6,7 +6,6 @@ import numpy as np
 import cv2
 import re
 
-label_map_path = 'flickr47_label_map.pbtxt'
 extensions = ['jpg']
 
 sys.path.append("..")
@@ -19,10 +18,9 @@ def get_label_map(label_map_path):
     for i in input.item:
         label_map[i.display_name] = i.id
     return label_map
-label_map = get_label_map(label_map_path)
 
 
-def get_label_from_filename(fname):
+def get_label_id_from_filename(fname, label_map):
     old_map = {
         'becks': 'becks_symbol',
         'carlsberg': 'carlsberg_symbol',
@@ -36,14 +34,27 @@ def get_label_from_filename(fname):
         'stella_artois_0': 'stellaartois_symbol',
         'stella_artois_1': 'stellaartois_symbol',
         'pepsi_0': 'pepsi_symbol',
-        'pepsi_1': 'pepsi_symbol'
+        'pepsi_1': 'pepsi_symbol',
+        'singha_0': 'singha_symbol',
+        'singha_1': 'singha_symbol',
+        'tsingtao_0': 'tsingtao_symbol',
+        'tsingtao_1': 'tsingtao_symbol'
     }
     name = fname.rsplit('.', 1)[0]
     if name in old_map:
         name = old_map[name]
-    return name
+    if name in label_map:
+        return name, label_map[name]
+    name = name.rsplit('_', 1)[0]
+    if name in label_map:
+        return name, label_map[name]
 
-def read_info(path):
+    #raise ValueError('No label for fname ' + fname)
+    print 'No label for fname ' + fname
+    return None, None
+
+
+def read_info(path, label_map):
     with open(path) as fp:
         # Read bounding box points
         line = fp.readline()
@@ -73,8 +84,9 @@ def read_info(path):
 
         # Read logo name
         logo_fname = fp.readline().strip()
-        label_name = get_label_from_filename(logo_fname)
-        label_id = label_map[label_name]
+        label_name, label_id = get_label_id_from_filename(logo_fname, label_map)
+        if label_name is None:
+            return None
         return {'bboxes': [[x0, y0, x1, y1]], 'label_names': [label_name], 'label_ids': [label_id]}
 
 def dist(p1, p2):
@@ -104,7 +116,10 @@ def get_bbox_from_mask(path):
             x, y, w, h = tx, ty, tw, th
     return [x, y, x + w, y + h]
 
-def combine_subdirs(input_dir, output_path):
+def combine_subdirs(input_dir, output_path, label_map_path):
+    # Load label map
+    label_map = get_label_map(label_map_path)
+
     # Get list of paths to all images under input_dir
     img_paths = []
     for root, dirs, files in os.walk(input_dir):
@@ -121,8 +136,9 @@ def combine_subdirs(input_dir, output_path):
         s = img_path.rsplit('.', 1)
         info_path = s[0] + '_bb.txt'
         if os.path.isfile(info_path):
-            info = read_info(info_path)
+            info = read_info(info_path, label_map)
             if info is not None:
+                name = info['label_names'][0]
                 all_info[img_path] = info
         else:
             print info_path + ' does not exist, skipping'
@@ -138,8 +154,8 @@ def combine_subdirs(input_dir, output_path):
 if __name__ == '__main__':
     args = sys.argv
 
-    if len(args) == 3:
-        combine_subdirs(args[1], args[2])
+    if len(args) == 4:
+        combine_subdirs(args[1], args[2], args[3])
     else:
-        print "Usage: python combine_subdirs input_dir output_path"
+        print "Usage: python combine_subdirs input_dir output_path label_map"
 
