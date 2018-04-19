@@ -13,7 +13,8 @@ logStream = openFile logPath mode:"w"
 
 tableHeight = 60 -- must match true table height
 
-matLibPath = maxFilePath + "mylib.mat"
+--matLibPath = maxFilePath + "mylib.mat"
+matLibPath = maxFilePath + "mylib_scanline.mat"
 
 artRenderer = RendererClass.classes[5]()
 scanlineRenderer = RendererClass.classes[1]()
@@ -53,28 +54,43 @@ for i in bumpPaths do
 )
 
 -- The texture/material for the logo object
-comp = compositeTexture()
-comp.add()
-logoStandardMat = standardMaterial()
-logoMat = physicalMaterial()
-$Logo.material = logoMat
-
-function randCam =
+logoObjs = #($Logo, $Logo2, $Logo3)
+bmtCache = #()
+maxLogos = 3
+for i = 1 to maxLogos do
 (
-	logo = $Logo.pos
+	append bmtCache 0
+)
+
+function randCam numLogos =
+(
+	pos = point3 0 0 0
+	distBetweenLogos = 0
+	for i = 1 to numLogos do
+	(
+		pos += logoObjs[i].pos
+		for j = 1 to numLogos do
+		(
+			d = distance logoObjs[i].pos logoObjs[j].pos
+			d = abs d
+			if d > distBetweenLogos then distBetweenLogos = d
+		)
+	)
+	if numLogos > 0 then pos /= numLogos
 	
-	x = logo[1] + (random 12 30)
-	y = logo[2]
-	z = logo[3] + (random 10 30)
-	dist = random 40 60
-	theta = random -30 30
+	x = pos[1] + (random 12 25)
+	y = pos[2]
+	z = pos[3] + (random 10 30)
+	dist = random 50 70
+	dist += distBetweenLogos * 0.8
+	theta = random -25 25
 	x = x + dist * cos(theta)
 	y = y + dist * sin(theta)
 	$PhysCamera001.pos = [x, y, z]
 	
-	x = logo[1] + (random -5 5)
-	y = logo[2] + (random -5 5)
-	z = logo[3] + (random -3 3)
+	x = pos[1] + (random -5 5)
+	y = pos[2] + (random -5 5)
+	z = pos[3] + (random -3 3)
 	$PhysCamera001.Target.pos = [x, y, z]
 	format "Cam pos % target %\n" $PhysCamera001.pos $PhysCamera001.Target.pos to:logStream
 )
@@ -92,6 +108,9 @@ function randLights =
 		i.kelvin = random 3000 10000
 		format "Light %: pos % intensity % kelvin %\n" i i.pos i.intensity i.kelvin to:logStream
 	)
+	-- Hardcode one light to be in front
+	all[1].pos[1] = random 0 200
+	
 	all[2].enabled = random 0 3 > 0
 	format "Light 2 enabled %\n" all[2].enabled to:logStream
 )
@@ -115,83 +134,100 @@ function getRandColor =
 	color r g b
 )
 
-function randLogo =
+function randLogo objIndex =
 (
 	-- Choose a random logo bitmap texture and get its aspect ratio
 	logoIndex = random 1 logoPngs.count
-	bmt = logoPngs[logoIndex]
+	bmtCache[objIndex] = copy logoPngs[logoIndex]
+	bmt = bmtCache[objIndex]
 	ratio = bmt.bitmap.width as float / bmt.bitmap.height
 	format "Logo path %\n" bmt.fileName to:logStream
 
 	-- Logo image size limits
-	minHeight = 8.0
+	minHeight = 9.0
 	maxHeight = maxHeight2 = maxU = minU = maxV = minV = minC = maxC = -1
 
 	-- Choose shape
 	shapeTypes = #("plane", "box", "cylinder")
 	shapeType = shapeTypes[random 1 shapeTypes.count]
 	format "shapeType %\n" shapeType to:logStream
+	
+	logoObj = logoObjs[objIndex]
+	logoObj.visibility = true
+	logoObj.pos.x = 0
+	logoObj.pos.y = 0
+	if objIndex == 2 then
+	(
+		logoObj.pos.x = random 0 10
+		logoObj.pos.y = random 20 30
+	)
+	else if objIndex == 3 then
+	(
+		logoObj.pos.x = random 0 10
+		logoObj.pos.y = random -30 -20
+	)
+	format "logo pos %\n" logoObj.pos to:logStream
 
 	if shapeType == "plane" then
 	(
-		$Logo.baseObject = copy $Plane001.baseObject
-		$Logo.rotation.x_rotation = 90 -- rotate to align material
-		$Logo.width = random 18 25.0 -- x to the right of camera
-		$Logo.length = random 15 25.0 -- y upwards
+		logoObj.baseObject = copy $Plane001.baseObject
+		logoObj.rotation.x_rotation = 90 -- rotate to align material
+		logoObj.width = random 18 25.0 -- x to the right of camera
+		logoObj.length = random 15 25.0 -- y upwards
 		
-		$Logo.modifiers[1].mapType = 0 -- Planar uvw map
-		$Logo.modifiers[1].u_tile = 1
+		logoObj.modifiers[1].mapType = 0 -- Planar uvw map
+		logoObj.modifiers[1].u_tile = 1
 		
-		$Logo.pos.z = tableHeight + $Logo.length/2
-		maxHeight = $Logo.length - 0.2
-		maxHeight2 =  ($Logo.width / ratio) - 0.2
-		format "Width % length %\n" $Logo.width $Logo.length to:logStream
+		logoObj.pos.z = tableHeight + logoObj.length/2
+		maxHeight = logoObj.length - 0.2
+		maxHeight2 =  (logoObj.width / ratio) - 0.2
+		format "Width % length %\n" logoObj.width logoObj.length to:logStream
 	)
 	else if shapeType == "box" then
 	(
-		$Logo.baseObject = copy $Box001.baseObject
-		$Logo.rotation.x_rotation = 90 -- rotate to align material
-		$Logo.width = random 18 25.0 -- x to the right of camera
-		$Logo.length = random 15 25.0 -- y upwards
-		$Logo.height = random 2 20.0 -- z towards camera
+		logoObj.baseObject = copy $Box001.baseObject
+		logoObj.rotation.x_rotation = 90 -- rotate to align material
+		logoObj.width = random 18 25.0 -- x to the right of camera
+		logoObj.length = random 15 25.0 -- y upwards
+		logoObj.height = random 2 20.0 -- z towards camera
 		
-		$Logo.modifiers[1].mapType = 0 -- Planar uvw map
-		$Logo.modifiers[1].u_tile = 1
+		logoObj.modifiers[1].mapType = 0 -- Planar uvw map
+		logoObj.modifiers[1].u_tile = 1
 		
-		$Logo.pos.z = tableHeight + $Logo.length/2
-		maxHeight = $Logo.length - 0.2
-		maxHeight2 =  ($Logo.width / ratio) - 0.2
-		format "Width % length % height %\n" $Logo.width $Logo.length $Logo.height to:logStream
+		logoObj.pos.z = tableHeight + logoObj.length/2
+		maxHeight = logoObj.length - 0.2
+		maxHeight2 =  (logoObj.width / ratio) - 0.2
+		format "Width % length % height %\n" logoObj.width logoObj.length logoObj.height to:logStream
 	)
 	else if shapeType == "cylinder" then
 	(
-		$Logo.baseObject = copy $Cylinder001.baseObject
-		$Logo.rotation.x_rotation = 0
-		$Logo.radius = random 10 20
-		$Logo.height = random 15 25
-		$Logo.pos.z = tableHeight
+		logoObj.baseObject = copy $Cylinder001.baseObject
+		logoObj.rotation.x_rotation = 0
+		logoObj.radius = random 10 17
+		logoObj.height = random 15 27
+		logoObj.pos.z = tableHeight
 		
-		circumference = 2 * pi * $Logo.radius
-		$Logo.modifiers[1].mapType = 1 -- Cylindrical uvw map
-		$Logo.modifiers[1].cap = true
-		$Logo.modifiers[1].u_tile = circumference
+		circumference = 2 * pi * logoObj.radius
+		logoObj.modifiers[1].mapType = 1 -- Cylindrical uvw map
+		logoObj.modifiers[1].cap = true
+		logoObj.modifiers[1].u_tile = circumference
 		
-		maxHeight = $Logo.height - 0.2
+		maxHeight = logoObj.height - 0.2
 		
 		-- Position logo randomly between 40% and 60% of circumference
 		maxC = 0.6 * circumference
 		minC = 0.4 * circumference
 		maxHeight2 =  (maxC - minC) / ratio
-		format "Radius % height %\n" $Logo.radius $Logo.height to:logStream
+		format "Radius % height %\n" logoObj.radius logoObj.height to:logStream
 	)
 	
 	-- Set UV map gizmo to origin
-	$Logo.modifiers[1].gizmo.pos = point3 0 0 0
-	$Logo.modifiers[1].gizmo.rotation = quat 0 0 -1 0
+	logoObj.modifiers[1].gizmo.pos = point3 0 0 0
+	logoObj.modifiers[1].gizmo.rotation = quat 0 0 -1 0
 
 	-- Randomize rotation
-	$Logo.rotation.z_rotation = random 80 100
-	format "z_rotation %\n" $Logo.rotation.z_rotation to:logStream
+	logoObj.rotation.z_rotation = random 77 103
+	format "z_rotation %\n" logoObj.rotation.z_rotation to:logStream
 
 	-- Randomize logo size	
 	if maxHeight2 < maxHeight then maxHeight = maxHeight2
@@ -205,16 +241,16 @@ function randLogo =
 	-- Calculate bounds then randomize logo position
 	if shapeType == "box" or shapeType == "plane" then
 	(
-		maxU = $Logo.width/2 - bmt.coords.realWorldWidth - 0.2
-		minU = -$Logo.width/2 + 0.2
-		maxV = $Logo.length/2 - bmt.coords.realWorldHeight - 0.2
-		minV = -$Logo.length/2 + 0.2
+		maxU = logoObj.width/2 - bmt.coords.realWorldWidth - 0.2
+		minU = -logoObj.width/2 + 0.2
+		maxV = logoObj.length/2 - bmt.coords.realWorldHeight - 0.2
+		minV = -logoObj.length/2 + 0.2
 	)
 	else if shapeType == "cylinder" then
 	(
 		maxU = maxC - bmt.coords.realWorldWidth
 		minU = minC
-		maxV = $Logo.height - bmt.coords.realWorldHeight - 0.2
+		maxV = logoObj.height - bmt.coords.realWorldHeight - 0.2
 		minV = 0
 	)
 	bmt.coords.U_offset = random minU maxU
@@ -223,20 +259,25 @@ function randLogo =
 
 	-- Put material together
 	-- If plane, then chance for transparent background
+	logoStandardMat = standardMaterial()
 	rand = random 0 2
 	if shapeType == "plane" and rand == 0 then
 	(
 		logoStandardMat.diffuseMap = bmt
 		logoStandardMat.opacityMap = bmt
-		$Logo.material = logoStandardMat
+		logoObj.material = logoStandardMat
 		format "Transparent plane\n" to:logStream
 	)
 	else
 	(
 		-- Random background color
+		comp = compositeTexture()
+		comp.add()
 		color1 = getRandColor()
 		comp.mapList[1] = colorMap solidcolor:color1
 		comp.mapList[2] = bmt
+
+		logoMat = physicalMaterial()
 		logoMat.base_color_map = comp
 		format "Logo background color %\n" color1 to:logStream
 	
@@ -255,20 +296,20 @@ function randLogo =
 		logoMat.roughness = random 0.0 1.0
 		format "Metalness % roughness %\n" logoMat.metalness logoMat.roughness to:logStream
 		
-		$Logo.material = logoMat
+		logoObj.material = logoMat
 	)
 
 	-- Return coordinates of logo corners and logo index
 	z = 0
-	if shapeType == "box" then z = $Logo.height
+	if shapeType == "box" then z = logoObj.height
 	p1 = point3 bmt.coords.U_offset bmt.coords.V_offset z
 	p2 = point3 (bmt.coords.U_offset + bmt.coords.realWorldWidth) bmt.coords.V_offset z
 	p3 = point3 bmt.coords.U_offset (bmt.coords.V_offset + bmt.coords.realWorldHeight) z
 	p4 = point3 (bmt.coords.U_offset + bmt.coords.realWorldWidth) (bmt.coords.V_offset + bmt.coords.realWorldHeight) z
-	p1 = p1 *  $Logo.transform
-	p2 = p2 * $Logo.transform
-	p3 = p3 * $Logo.transform
-	p4 = p4 * $Logo.transform
+	p1 = p1 *  logoObj.transform
+	p2 = p2 * logoObj.transform
+	p3 = p3 * logoObj.transform
+	p4 = p4 * logoObj.transform
 	#(p1, p2, p3, p4, logoIndex)
 )
 
@@ -286,7 +327,7 @@ function distPointLine x0 y0 x1 y1 x2 y2 =
 	abs(num) / den
 )
 
-function randObj obj = 
+function randDistractor obj numLogos = 
 (
 	obj.visibility = true
 	shapeTypes = #("box", "cone", "cylinder", "pyramid", "sphere", "teapot", "tube")
@@ -359,24 +400,33 @@ function randObj obj =
 	(
 		x = random -50 30
 		y = random -40 40
-		d = distPointLine x y $PhysCamera001.pos[1] $PhysCamera001.pos[2] $Logo.pos[1] $Logo.pos[2]
-		if x < -30 or d > 25 then loop = false
+		isOk = true
+		if x > -30 then
+		(
+			for i = 1 to numLogos do
+			(
+				logoObj = logoObjs[i]
+				d = distPointLine x y $PhysCamera001.pos[1] $PhysCamera001.pos[2] logoObj.pos[1] logoObj.pos[2]
+				if d < 25 then isOk = false
+			)
+		)
+		if isOk then loop = false
 	)
 	obj.pos = point3 x y z
-	format "randObj pos % shape % mat %\n" obj.pos shapeType obj.mat to:logStream
+	format "randDistractor pos % shape % mat %\n" obj.pos shapeType obj.mat to:logStream
 )
 
-function randObjs =
+function randDistractors numLogos =
 (
 	numObjs = 0
 	rand = random 0 100
 	if rand < 40 then numObjs = 1
 	else if rand < 70 then numObjs = 2
 	
-	format "Number of rand objects: %\n" numObjs to:logStream
-	if numObjs > 0 then randObj $Obj001
+	format "Number of distractor objects: %\n" numObjs to:logStream
+	if numObjs > 0 then randDistractor $Obj001 numLogos
 	else removeObj $Obj001
-	if numObjs > 1 then randObj $Obj002
+	if numObjs > 1 then randDistractor $Obj002 numLogos
 	else removeObj $Obj002
 )
 
@@ -392,58 +442,64 @@ function mapWorldToScreen thePoint camTf =
 	point3 (x_aspect*(thePos.x-screen_origin.x)) (-(y_aspect*(thePos.y-screen_origin.y))) 0
 )
 
-function saveLogoInfo logoInfo fname =
+function saveLogoInfo logoInfos fname =
 (
 	--m = Inverse($PhysCamera001.transform) -- left handed rotation?
 	--f = $PhysCamera001.focal_length_mm
 	
 	camTf = Inverse($PhysCamera001.transform)
-	
-	corners = #(logoInfo[1], logoInfo[2], logoInfo[3], logoInfo[4])
-	out = #()
-	for c in corners do
-	(
-		p = mapWorldToScreen c camTf
-		append out p
-	)
 	print fname
 	fstream = openFile fname mode:"w"
-	logoPath = logoPaths[logoInfo[5]]
-	split = filterString logoPath "\\"
-	format "% % % %\n%" out[1] out[2] out[3] out[4] split[split.count] to:fstream
+	for logoInfo in logoInfos do
+	(
+		corners = #(logoInfo[1], logoInfo[2], logoInfo[3], logoInfo[4])
+		out = #()
+		for c in corners do
+		(
+			p = mapWorldToScreen c camTf
+			append out p
+		)
+		logoPath = logoPaths[logoInfo[5]]
+		split = filterString logoPath "\\"
+		format "% % % %\n%\n" out[1] out[2] out[3] out[4] split[split.count] to:fstream
+	)
 	
 	close fstream
 )
 
-function renderCam i logoInfo =
+function renderMask i objIndex =
 (
 	-- Render masks
 	-- Enable elements and set output path
-	outputPath = outputDir + "\\" + i as string + "_scanline.jpg"
+	outObjIndex = objIndex - 1
+	outputPath = outputDir + "\\" + i as string + "_" + outObjIndex as string + "_scanline.jpg"
 	renderers.current = scanlineRenderer
 	re = maxOps.GetCurRenderElementMgr()
 	elem = re.GetRenderElement 0
-	elemPath = outputDir + "\\" + i as string + "_mask.bmp"
+	elemPath = outputDir + "\\" + i as string + "_" + outObjIndex as string + "_mask.bmp"
 	re.SetRenderElementFilename 0 elemPath
 	re.SetElementsActive true
 	
 	-- Render only logo object
-	select $Logo
+	logoObj = logoObjs[objIndex]
+	select logoObj
 	
 	-- Set to opacityMap, render alpha element
-	logoIndex = logoInfo[5]
-	tempMat = standardMaterial opacityMap:logoPngs[logoIndex]
-	prevMat = $Logo.material
-	$Logo.material = tempMat
+	tempMat = standardMaterial opacityMap:bmtCache[objIndex]
+	prevMat = logoObj.material
+	logoObj.material = tempMat
 	render camera:$PhysCamera001 outputfile:outputPath vfb:off outputSize:outputSize renderElement:true renderType:#selected
-	$Logo.material = prevMat
+	logoObj.material = prevMat
+)
 
-	-- Render rgb
+function renderRgb i =
+(
 	outputPath = outputDir + "\\" + i as string + ".jpg"
 	format "Renderer name: %\n" rendererName to:logStream
 	if rendererName == "art" then renderers.current = artRenderer
 	else if rendererName == "scanline" then renderers.current = scanlineRenderer
 	else print "ERROR: Invalid rendererName."
+	re = maxOps.GetCurRenderElementMgr()
 	re.SetElementsActive false
 	render camera:$PhysCamera001 outputfile:outputPath vfb:off outputSize:outputSize renderElement:false renderType:#view
 )
@@ -470,29 +526,45 @@ function main =
 	)
 	
 	i=0
-	while i < 100000 do
+	while i < 20 do
 	(
 		format "\n\nIteration %\n" i to:logStream
 		if keyboard.escPressed do exit
-		print "randCam"
-		randCam()
+		--numLogos = random 1 3
+		numLogos = random 2 3
+ 		format "numLogos: %\n" numLogos to:logStream
 		print "randLights"
 		randLights()
 		print "randBackground"
 		randBackground()
-		print "randObjs"
-		randObjs()
-		print "randLogo"
-		logoInfo = randLogo()
 		print "randOutputSize"
-		sizes = #(300, 350, 400)
+		sizes = #(400, 450, 500)
 		outputSize = point2 sizes[random 1 sizes.count] sizes[random 1 sizes.count]
 		format "Output size: %\n" outputSize to:logStream
+		print "randLogo"
+		logoInfos = #()
+		for j = 1 to numLogos do
+		(
+			logoInfo = randLogo j
+			append logoInfos logoInfo
+		)
+		print "randCam"
+		randCam numLogos
 		print "saveLogoInfo"
 		outputTxt = outputDir + "\\" + i as string + "_bb.txt"
-		saveLogoInfo logoInfo outputTxt
+		saveLogoInfo logoInfos outputTxt
+		for j = (numLogos + 1) to maxLogos do
+		(
+			removeObj logoObjs[j]
+		)
+		print "randDistractors"
+		randDistractors numLogos
 		print "renderCam"
-		renderCam i logoInfo
+		for j = 1 to numLogos do
+		(
+			renderMask i j
+		)
+		renderRgb i
 		i = i + 1
 	)
 
