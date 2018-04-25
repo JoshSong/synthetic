@@ -129,27 +129,42 @@ def combine_subdirs(input_dir, output_path, label_map_path):
                 img_paths.append(os.path.join(root, f))
     print 'Done'
 
+    max_per_logo = 100
+    counts = {}
+    allowed = set(['erdinger_symbol','ferrari','pepsi_symbol','stellaartois_symbol','dhl',
+            'guinness_symbol','carlsberg_symbol','milka','cocacola','apple','ups',
+            'aldi','tsingtao_symbol','google','chimay_symbol','singha_symbol','HP',
+            'starbucks','heineken','bmw','corona_symbol','paulaner_symbol','fosters_symbol',
+            'rittersport','nvidia_symbol','fedex','esso_symbol','ford','texaco','becks_symbol',
+            'shell','adidas_symbol'])
+    use_limits = True
+
     # Collect bounding box and label info
     i = 0
     all_info = {}
     for img_path in img_paths:
+        i += 1
+        if i % 100 == 0:
+            print '{}/{} done'.format(i, len(img_paths))
         s = img_path.rsplit('.', 1)
         info_path = s[0] + '_bb.txt'
         if os.path.isfile(info_path):
             info = read_info(info_path, label_map)
             if info is not None:
                 name = info['label_names'][0]
+                if use_limits :
+                    if name not in allowed or counts.get(name, 0) >= max_per_logo:
+                        continue
+                counts[name] = counts.get(name, 0) + 1
                 all_info[img_path] = info
         else:
             print info_path + ' does not exist, skipping'
-        i += 1
-        if i % 100 == 0:
-            print '{}/{} done'.format(i, len(img_paths))
 
     # Save json to output_path
     with open(output_path, 'w') as fp:
         json.dump(all_info, fp, indent=4, sort_keys=True)
 
+    print counts
 
 if __name__ == '__main__':
     args = sys.argv
