@@ -5,6 +5,7 @@ import math
 import numpy as np
 import cv2
 import re
+import random
 
 extensions = ['jpg']
 
@@ -20,7 +21,7 @@ def get_label_map(label_map_path):
     return label_map
 
 
-def get_label_id_from_filename(fname, label_map):
+def get_label_id_from_filename(fname, label_map, flickr32=True):
     old_map = {
         'becks': 'becks_symbol',
         'carlsberg': 'carlsberg_symbol',
@@ -43,6 +44,12 @@ def get_label_id_from_filename(fname, label_map):
     name = fname.rsplit('.', 1)[0]
     if name in old_map:
         name = old_map[name]
+    if flickr32:
+        if name.split('_symbol')[0] in label_map: # Flickr32 instead of 47
+            name = name.split('_symbol')[0]
+            return name, label_map[name]
+        if name == 'guinness_symbol':
+            return 'guiness', label_map['guiness']
     if name in label_map:
         return name, label_map[name]
     name = name.rsplit('_', 1)[0]
@@ -116,7 +123,7 @@ def get_bbox_from_mask(path):
             x, y, w, h = tx, ty, tw, th
     return [x, y, x + w, y + h]
 
-def combine_subdirs(input_dir, output_path, label_map_path):
+def combine_subdirs(input_dir, output_path, label_map_path, exclude={}):
     # Load label map
     label_map = get_label_map(label_map_path)
 
@@ -127,16 +134,21 @@ def combine_subdirs(input_dir, output_path, label_map_path):
             s = f.rsplit('.', 1)
             if len(s) > 1 and s[1] in extensions and s[0].isdigit():
                 img_paths.append(os.path.join(root, f))
+    random.shuffle(img_paths)
     print 'Done'
 
     max_per_logo = 100
+    max_total = 32 * max_per_logo
+    total_count = 0
     counts = {}
+    """
     allowed = set(['erdinger_symbol','ferrari','pepsi_symbol','stellaartois_symbol','dhl',
             'guinness_symbol','carlsberg_symbol','milka','cocacola','apple','ups',
             'aldi','tsingtao_symbol','google','chimay_symbol','singha_symbol','HP',
             'starbucks','heineken','bmw','corona_symbol','paulaner_symbol','fosters_symbol',
             'rittersport','nvidia_symbol','fedex','esso_symbol','ford','texaco','becks_symbol',
             'shell','adidas_symbol'])
+    """
     use_limits = True
 
     # Collect bounding box and label info
@@ -145,7 +157,11 @@ def combine_subdirs(input_dir, output_path, label_map_path):
     for img_path in img_paths:
         i += 1
         if i % 100 == 0:
-            print '{}/{} done'.format(i, len(img_paths))
+            print '{}/{} images processed, {}/{} kept'.format(i, len(img_paths), total_count, max_total)
+            print counts
+        if img_path in exclude:
+            print 'Excluding ' + img_path
+            continue
         s = img_path.rsplit('.', 1)
         info_path = s[0] + '_bb.txt'
         if os.path.isfile(info_path):
@@ -153,9 +169,13 @@ def combine_subdirs(input_dir, output_path, label_map_path):
             if info is not None:
                 name = info['label_names'][0]
                 if use_limits :
-                    if name not in allowed or counts.get(name, 0) >= max_per_logo:
+                    if total_count >= max_total:
+                        break
+                    #if name not in allowed or counts.get(name, 0) >= max_per_logo:
+                    if counts.get(name, 0) >= max_per_logo:
                         continue
                 counts[name] = counts.get(name, 0) + 1
+                total_count += 1
                 all_info[img_path] = info
         else:
             print info_path + ' does not exist, skipping'
@@ -171,6 +191,9 @@ if __name__ == '__main__':
 
     if len(args) == 4:
         combine_subdirs(args[1], args[2], args[3])
+    elif len(args) == 5:
+        exclude = json.load(open(args[4]))
+        combine_subdirs(args[1], args[2], args[3], exclude)
     else:
-        print "Usage: python combine_subdirs input_dir output_path label_map"
+        print "Usage: python combine_subdirs input_dir output_path label_map [train path if making test set]"
 
