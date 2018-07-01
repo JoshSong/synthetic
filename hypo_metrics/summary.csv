@@ -1,0 +1,9 @@
+"Test 1: synthetic data generated for camera distance 20 to 200 cm, camera angle -60 to 60 deg, light intensity 10 to 2000. 20 values taken for each variable results in 20x20x20=8000 test images per logo",,,,,,,
+Test 2: real data gathered by taking photos of a real pringles can and bottle of dettol soap. Currently has 253 images,,,,,,,
+,,,,,,,
+Set,Camera distances (cm),Camera angles (deg),Light intensities,Total number of training images per logo,Test 1 mean average precision,Test 2 mean average precision,Classifier version
+1,"30, 37.5, 45. 52.5","-45, -15, 15, 45","200, 400, 600, 800",64,0.486,0.00013,"v4, 31"
+2,"20, 46.7, 73.3, 100","-45, -15, 15, 45","100, 433, 766, 1100",64,1,0.0078,"v1, 28"
+3,"20, 80, 140, 200","-60, -20, 20, 60","10, 673, 1336, 2000",64,0.995,0.0051,"v2, 29"
+4,"20, 200","-45, 45","10, 1100",8,0.999,0.0034,"v5, 32"
+5,?,?,?,13056,0.989,0.678,4
