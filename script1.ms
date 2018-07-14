@@ -23,9 +23,46 @@ rendererName = "scanline"
 
 -- Load logo images
 print "Loading logo images"
-logoDir = maxFilePath + "flickr47\\*"
---logoDir = maxFilePath + "dettol_pringles\\*"
-logoPaths = getFiles logoDir
+logoDir = ""
+logoPaths = #()
+logoInds = #() -- Arrays within this array indicate groups, needed for v2
+logoIndexing = "v2"
+
+-- V1: Simple pngs in folder
+if logoIndexing == "v1" do
+(
+	logoDir = maxFilePath + "flickr47\\*"
+	--logoDir = maxFilePath + "dettol_pringles\\*"
+	logoPaths = getFiles logoDir
+	for i = 1 to logoPaths.count do append logoInds i
+)
+
+-- V2: Similar images grouped in folders, mix of json and png
+if logoIndexing == "v2" do
+(
+	dirname = "drinks_v0"
+	logoDir = maxFilePath + dirname + "\\*"
+	dirs = getDirectories logoDir
+	for d in dirs do
+	(
+		append logoInds #()
+		files = getFiles (d + "*.png")
+		for f in files do
+		(
+			append logoPaths f
+			append logoInds[logoInds.count] logoPaths.count
+		)
+	)
+	logoDirPng = maxFilePath + dirname + "\\*.png"
+	files = getFiles logoDirPng
+	for f in files do
+	(
+		append logoPaths f
+		append logoInds logoPaths.count
+	)
+)
+
+-- Read pngs
 logoPngs = #()
 for i in logoPaths do
 (
@@ -134,10 +171,10 @@ function getRandColor =
 	color r g b
 )
 
-function randLogo objIndex =
+function randLogo objIndex logoIndex =
 (
 	-- Choose a random logo bitmap texture and get its aspect ratio
-	logoIndex = random 1 logoPngs.count
+	--logoIndex = random 1 logoPngs.count
 	bmtCache[objIndex] = copy logoPngs[logoIndex]
 	bmt = bmtCache[objIndex]
 	ratio = bmt.bitmap.width as float / bmt.bitmap.height
@@ -524,14 +561,23 @@ function main =
 		print "Loading material library"
 		loadMaterialLibrary matLibPath
 	)
+
+	samplesPerLogo = 10
+	inds = #()
+	for i = 1 to samplesPerLogo do
+	(
+		for j = 1 to logoInds.count do
+		(
+			append inds j
+		)
+	)
 	
 	i=0
-	while i < 20 do
+	while inds.count > 0 do
 	(
 		format "\n\nIteration %\n" i to:logStream
 		if keyboard.escPressed do exit
-		--numLogos = random 1 3
-		numLogos = random 2 3
+		numLogos = random 1 (amin 3 inds.count)
  		format "numLogos: %\n" numLogos to:logStream
 		print "randLights"
 		randLights()
@@ -545,7 +591,14 @@ function main =
 		logoInfos = #()
 		for j = 1 to numLogos do
 		(
-			logoInfo = randLogo j
+			r = random 1 inds.count
+			ind = logoInds[inds[r]]
+			if classOf ind == Array do
+			(
+				ind = ind[random 1 ind.count]
+			)
+			logoInfo = randLogo j ind
+			deleteItem inds r
 			append logoInfos logoInfo
 		)
 		print "randCam"
