@@ -153,6 +153,33 @@ def undo_group(original_dir):
         for f in files:
             os.rename(os.path.join(root, f), os.path.join(original_dir, f))
 
+def generate_group_label_map(group_dir):
+    not_grouped_ids = []
+    grouped_ids = {} # {id: group id}
+    group_ids = []
+    for f in os.listdir(group_dir):
+        path = os.path.join(group_dir, f)
+        if os.path.isfile(path):
+            id = f.rsplit('.', 1)[0]
+            not_grouped_ids.append(id)
+        elif os.path.isdir(path):
+            gf = os.listdir(path)
+            group = gf[0].rsplit('.', 1)[0]
+            group_ids.append(group)
+            for f2 in gf:
+                id = f2.rsplit('.', 1)[0]
+                grouped_ids[id] = group
+    with open('grouped_ids.json', 'w') as fp:
+        json.dump(grouped_ids, fp, indent=4, sort_keys=True)
+    ids = sorted(not_grouped_ids + group_ids)
+    with open('label_map.pbtxt', 'w') as fp:
+        for i in range(len(ids)):
+            fp.write('item {\n')
+            fp.write('  name: "' + ids[i] + '"\n')
+            fp.write('  id: ' + str(i + 1) + '\n')
+            fp.write('  display_name: "' + ids[i] + '"\n')
+            fp.write('}\n')
+
 if __name__ == '__main__':
     args = sys.argv
 
@@ -162,7 +189,10 @@ if __name__ == '__main__':
         group(args[2])
     elif len(args) == 3 and args[1] == 'undo_group':
         undo_group(args[2])
+    elif len(args) == 3 and args[1] == 'label_map':
+        generate_group_label_map(args[2])
     else:
         print "Usage: python pod_filter.py filter input_dir"
-        print "Or: python pod_filter.py group input_dir"
+        print "Or: python pod_filter.py group group_dir"
         print "Or: python pod_filter.py undo_group original_dir"
+        print "Or: python pod_filter.py label_map group_dir"
