@@ -26,7 +26,7 @@ print "Loading logo images"
 logoDir = ""
 logoPaths = #()
 logoInds = #() -- Arrays within this array indicate groups, needed for v2
-logoIndexing = "v2"
+logoIndexing = "v1"
 
 -- V1: Simple pngs in folder
 if logoIndexing == "v1" do
@@ -307,11 +307,19 @@ function randLogo objIndex logoIndex =
 	)
 	else
 	(
-		-- Random background color
 		comp = compositeTexture()
 		comp.add()
-		color1 = getRandColor()
-		comp.mapList[1] = colorMap solidcolor:color1
+		randTexture = currentMaterialLibrary[random 1 currentMaterialLibrary.count]
+		if hasProperty randTexture "Generic_Image" then
+		(
+			comp.mapList[1] = randTexture.Generic_Image
+		)
+		else
+		(
+			-- Random background color
+			color1 = getRandColor()
+			comp.mapList[1] = colorMap solidcolor:color1
+		)
 		comp.mapList[2] = bmt
 
 		logoMat = physicalMaterial()
@@ -562,7 +570,7 @@ function main =
 		loadMaterialLibrary matLibPath
 	)
 
-	samplesPerLogo = 10
+	samplesPerLogo = 100
 	inds = #()
 	for i = 1 to samplesPerLogo do
 	(
