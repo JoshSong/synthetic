@@ -72,6 +72,33 @@ for i in logoPaths do
 	bmt.coords.U_Tile = false
 	bmt.coords.V_Tile = false
 	append logoPngs bmt
+) 
+
+-- Load line images
+print "Loading line images"
+linesDir = maxFilePath + "lines\\output0\\*"
+linesPaths = getFiles linesDir
+linesImgs0 = #()
+for i in linesPaths do
+(
+	bmt = bitmapTexture filename:i
+	bmt.coords.realWorldScale = true
+	bmt.coords.realWorldHeight = 20
+	ratio = bmt.bitmap.width as float / bmt.bitmap.height
+	bmt.coords.realWorldWidth = ratio * bmt.coords.realWorldHeight
+	append linesImgs0 bmt
+)
+linesDir = maxFilePath + "lines\\output1\\*"
+linesPaths = getFiles linesDir
+linesImgs1 = #()
+for i in linesPaths do
+(
+	bmt = bitmapTexture filename:i
+	bmt.coords.realWorldScale = true
+	bmt.coords.realWorldHeight = 20
+	ratio = bmt.bitmap.width as float / bmt.bitmap.height
+	bmt.coords.realWorldWidth = ratio * bmt.coords.realWorldHeight
+	append linesImgs1 bmt
 )
 
 -- Load bump texture images
@@ -309,8 +336,9 @@ function randLogo objIndex logoIndex =
 	(
 		comp = compositeTexture()
 		comp.add()
+		comp.add()
 		randTexture = currentMaterialLibrary[random 1 currentMaterialLibrary.count]
-		if hasProperty randTexture "Generic_Image" then
+		if False then -- hasProperty randTexture "Generic_Image" then
 		(
 			comp.mapList[1] = randTexture.Generic_Image
 		)
@@ -320,7 +348,13 @@ function randLogo objIndex logoIndex =
 			color1 = getRandColor()
 			comp.mapList[1] = colorMap solidcolor:color1
 		)
-		comp.mapList[2] = bmt
+		comp.mapList[2] = linesImgs0[random 1 linesImgs0.count]
+		comp.mapList[3] = bmt
+		if random 0 1 == 0 then
+		(
+			comp.add()
+			comp.mapList[4] = linesImgs1[random 1 linesImgs1.count]
+		)
 
 		logoMat = physicalMaterial()
 		logoMat.base_color_map = comp
@@ -435,7 +469,30 @@ function randDistractor obj numLogos =
 	)
 
 	-- Random material
-	obj.mat = currentMaterialLibrary[random 1 currentMaterialLibrary.count]
+	if random 0 3 <= 2 then
+	(
+		obj.mat = currentMaterialLibrary[random 1 currentMaterialLibrary.count]
+	)
+	else
+	(
+		comp = compositeTexture()
+		comp.add()
+		comp.add()
+		color1 = getRandColor()
+		comp.mapList[1] = colorMap solidcolor:color1
+		comp.mapList[2] = linesImgs0[random 1 linesImgs0.count]
+		obj.mat = physicalMaterial()
+		obj.mat.base_color_map = comp
+		if random 0 1 == 0 then
+		(
+			obj.mat.bump_map_amt = random 0.5 1.0
+			obj.mat.bump_map = bumpImgs[random 1 bumpImgs.count]
+		)
+		else obj.mat.bump_map = undefined
+		if random 0 2 == 0 then  obj.mat.metalness = random 0.1 1.0
+		else  obj.mat.metalness = 0.0
+		obj.mat.roughness = random 0.0 1.0
+	)
 	
 	-- Random position on table. Ensure not between camera and logo
 	x = 0
@@ -570,7 +627,7 @@ function main =
 		loadMaterialLibrary matLibPath
 	)
 
-	samplesPerLogo = 100
+	samplesPerLogo = 50
 	inds = #()
 	for i = 1 to samplesPerLogo do
 	(
@@ -585,7 +642,7 @@ function main =
 	(
 		format "\n\nIteration %\n" i to:logStream
 		if keyboard.escPressed do exit
-		numLogos = random 1 (amin 3 inds.count)
+		numLogos = 1-- random 1 (amin 3 inds.count)
  		format "numLogos: %\n" numLogos to:logStream
 		print "randLights"
 		randLights()
