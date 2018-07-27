@@ -75,6 +75,7 @@ for i in logoPaths do
 ) 
 
 -- Load line images
+/*
 print "Loading line images"
 linesDir = maxFilePath + "lines\\output0\\*"
 linesPaths = getFiles linesDir
@@ -100,6 +101,7 @@ for i in linesPaths do
 	bmt.coords.realWorldWidth = ratio * bmt.coords.realWorldHeight
 	append linesImgs1 bmt
 )
+*/
 
 -- Load bump texture images
 print "Loading bump images"
@@ -196,6 +198,64 @@ function getRandColor =
 	g = random 30 255
 	b = random 30 255
 	color r g b
+)
+
+function createMaterial logoBitmap =
+(
+	print logoBitmap
+	comp = compositeTexture()
+	comp.add()
+	randTexture = currentMaterialLibrary[random 1 currentMaterialLibrary.count]
+	if False then -- hasProperty randTexture "Generic_Image" then
+	(
+		comp.mapList[1] = randTexture.Generic_Image
+	)
+	else
+	(
+		-- Random background color
+		color1 = getRandColor()
+		comp.mapList[1] = colorMap solidcolor:color1
+	)
+	
+	-- Insert logo if needed
+	if logoBitmap != undefined then
+	(
+		comp.add()
+		comp.mapList[2] = logoBitmap
+	)	
+	
+	/*
+	-- Lines
+	comp.mapList[2] = linesImgs0[random 1 linesImgs0.count]
+	comp.mapList[3] = bmt
+	if random 0 1 == 0 then
+	(
+		comp.add()
+		comp.mapList[4] = linesImgs1[random 1 linesImgs1.count]
+	)
+	*/
+
+	logoMat = physicalMaterial()
+	logoMat.base_color_map = comp
+	format "Logo background color %\n" color1 to:logStream
+
+	-- Random bump map
+	/*
+	if random 0 1 == 0 then
+	(
+		logoMat.bump_map_amt = random 0.5 1.0
+		logoMat.bump_map = bumpImgs[random 1 bumpImgs.count]
+		format "Bump map % amount %\n" logoMat.bump_map.fileName logoMat.bump_map_amt to:logStream
+	)
+	else logoMat.bump_map = undefined
+	*/
+	
+	-- Randomize other material properties
+	if random 0 2 == 0 then logoMat.metalness = random 0.1 1.0
+	else logoMat.metalness = 0.0
+	logoMat.roughness = random 0.0 1.0
+	format "Metalness % roughness %\n" logoMat.metalness logoMat.roughness to:logStream
+	logoMat
 )
 
 function randLogo objIndex logoIndex =
@@ -323,10 +383,10 @@ function randLogo objIndex logoIndex =
 
 	-- Put material together
 	-- If plane, then chance for transparent background
-	logoStandardMat = standardMaterial()
 	rand = random 0 2
 	if shapeType == "plane" and rand == 0 then
 	(
+		logoStandardMat = standardMaterial()
 		logoStandardMat.diffuseMap = bmt
 		logoStandardMat.opacityMap = bmt
 		logoObj.material = logoStandardMat
@@ -334,48 +394,7 @@ function randLogo objIndex logoIndex =
 	)
 	else
 	(
-		comp = compositeTexture()
-		comp.add()
-		comp.add()
-		randTexture = currentMaterialLibrary[random 1 currentMaterialLibrary.count]
-		if False then -- hasProperty randTexture "Generic_Image" then
-		(
-			comp.mapList[1] = randTexture.Generic_Image
-		)
-		else
-		(
-			-- Random background color
-			color1 = getRandColor()
-			comp.mapList[1] = colorMap solidcolor:color1
-		)
-		comp.mapList[2] = linesImgs0[random 1 linesImgs0.count]
-		comp.mapList[3] = bmt
-		if random 0 1 == 0 then
-		(
-			comp.add()
-			comp.mapList[4] = linesImgs1[random 1 linesImgs1.count]
-		)
-
-		logoMat = physicalMaterial()
-		logoMat.base_color_map = comp
-		format "Logo background color %\n" color1 to:logStream
-	
-		-- Random bump map
-		if random 0 1 == 0 then
-		(
-			logoMat.bump_map_amt = random 0.5 1.0
-			logoMat.bump_map = bumpImgs[random 1 bumpImgs.count]
-			format "Bump map % amount %\n" logoMat.bump_map.fileName logoMat.bump_map_amt to:logStream
-		)
-		else logoMat.bump_map = undefined
-		
-		-- Randomize other material properties
-		if random 0 2 == 0 then logoMat.metalness = random 0.1 1.0
-		else logoMat.metalness = 0.0
-		logoMat.roughness = random 0.0 1.0
-		format "Metalness % roughness %\n" logoMat.metalness logoMat.roughness to:logStream
-		
-		logoObj.material = logoMat
+		logoObj.material = createMaterial bmt
 	)
 
 	-- Return coordinates of logo corners and logo index
@@ -469,30 +488,7 @@ function randDistractor obj numLogos =
 	)
 
 	-- Random material
-	if random 0 3 <= 2 then
-	(
-		obj.mat = currentMaterialLibrary[random 1 currentMaterialLibrary.count]
-	)
-	else
-	(
-		comp = compositeTexture()
-		comp.add()
-		comp.add()
-		color1 = getRandColor()
-		comp.mapList[1] = colorMap solidcolor:color1
-		comp.mapList[2] = linesImgs0[random 1 linesImgs0.count]
-		obj.mat = physicalMaterial()
-		obj.mat.base_color_map = comp
-		if random 0 1 == 0 then
-		(
-			obj.mat.bump_map_amt = random 0.5 1.0
-			obj.mat.bump_map = bumpImgs[random 1 bumpImgs.count]
-		)
-		else obj.mat.bump_map = undefined
-		if random 0 2 == 0 then  obj.mat.metalness = random 0.1 1.0
-		else  obj.mat.metalness = 0.0
-		obj.mat.roughness = random 0.0 1.0
-	)
+	obj.mat = createMaterial undefined
 	
 	-- Random position on table. Ensure not between camera and logo
 	x = 0
