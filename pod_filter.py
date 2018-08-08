@@ -154,14 +154,14 @@ def undo_group(original_dir):
             os.rename(os.path.join(root, f), os.path.join(original_dir, f))
 
 def generate_group_label_map(group_dir):
-    not_grouped_ids = []
+    not_grouped_ids = set()
     grouped_ids = {} # {id: group id}
     group_ids = []
     for f in os.listdir(group_dir):
         path = os.path.join(group_dir, f)
         if os.path.isfile(path):
             id = f.rsplit('.', 1)[0]
-            not_grouped_ids.append(id)
+            not_grouped_ids.add(id)
         elif os.path.isdir(path):
             gf = os.listdir(path)
             group = gf[0].rsplit('.', 1)[0]
@@ -171,7 +171,7 @@ def generate_group_label_map(group_dir):
                 grouped_ids[id] = group
     with open('grouped_ids.json', 'w') as fp:
         json.dump(grouped_ids, fp, indent=4, sort_keys=True)
-    ids = sorted(not_grouped_ids + group_ids)
+    ids = sorted(list(not_grouped_ids) + group_ids)
     with open('label_map.pbtxt', 'w') as fp:
         for i in range(len(ids)):
             fp.write('item {\n')
