@@ -26,10 +26,10 @@ print "Loading logo images"
 logoDir = ""
 logoPaths = #()
 logoInds = #() -- Arrays within this array indicate groups, needed for v2
-logoIndexing = "v1"
+logoIndexing = "v2"
 
 -- V1: Simple pngs in folder
-if logoIndexing == "v1" do
+if logoIndexing == "v2" do
 (
 	logoDir = maxFilePath + "flickr47\\*"
 	--logoDir = maxFilePath + "dettol_pringles\\*"
@@ -66,6 +66,7 @@ if logoIndexing == "v2" do
 logoPngs = #()
 for i in logoPaths do
 (
+	print i
 	bmt = bitmapTexture filename:i
 	bmt.monoOutput = 1 -- output alpha for opacity maps
 	bmt.coords.realWorldScale = true
@@ -200,13 +201,18 @@ function getRandColor =
 	color r g b
 )
 
-function createMaterial logoBitmap =
+function createMaterial logoBitmap matIndex =
 (
-	print logoBitmap
 	comp = compositeTexture()
 	comp.add()
+	
 	randTexture = currentMaterialLibrary[random 1 currentMaterialLibrary.count]
-	if False then -- hasProperty randTexture "Generic_Image" then
+	if matIndex != undefined then
+	(
+		randTexture = currentMaterialLibrary[matIndex]
+	)
+
+	if hasProperty randTexture "Generic_Image" then
 	(
 		comp.mapList[1] = randTexture.Generic_Image
 	)
@@ -258,7 +264,7 @@ function createMaterial logoBitmap =
 	logoMat
 )
 
-function randLogo objIndex logoIndex =
+function randLogo objIndex logoIndex matIndex =
 (
 	-- Choose a random logo bitmap texture and get its aspect ratio
 	--logoIndex = random 1 logoPngs.count
@@ -394,9 +400,10 @@ function randLogo objIndex logoIndex =
 	)
 	else
 	(
-		logoObj.material = createMaterial bmt
+		logoObj.material = createMaterial bmt matIndex
 	)
-
+	logoObj.material = createMaterial bmt matIndex
+	
 	-- Return coordinates of logo corners and logo index
 	z = 0
 	if shapeType == "box" then z = logoObj.height
@@ -488,7 +495,7 @@ function randDistractor obj numLogos =
 	)
 
 	-- Random material
-	obj.mat = createMaterial undefined
+	obj.mat = createMaterial undefined undefined
 	
 	-- Random position on table. Ensure not between camera and logo
 	x = 0
@@ -624,6 +631,7 @@ function main =
 	)
 
 	samplesPerLogo = 50
+
 	inds = #()
 	for i = 1 to samplesPerLogo do
 	(
@@ -638,7 +646,7 @@ function main =
 	(
 		format "\n\nIteration %\n" i to:logStream
 		if keyboard.escPressed do exit
-		numLogos = 1-- random 1 (amin 3 inds.count)
+		numLogos = random 1 (amin 3 inds.count)
  		format "numLogos: %\n" numLogos to:logStream
 		print "randLights"
 		randLights()
@@ -658,10 +666,11 @@ function main =
 			(
 				ind = ind[random 1 ind.count]
 			)
-			logoInfo = randLogo j ind
+			logoInfo = randLogo j ind undefined
 			deleteItem inds r
 			append logoInfos logoInfo
 		)
+		
 		print "randCam"
 		randCam numLogos
 		print "saveLogoInfo"
