@@ -26,10 +26,10 @@ print "Loading logo images"
 logoDir = ""
 logoPaths = #()
 logoInds = #() -- Arrays within this array indicate groups, needed for v2
-logoIndexing = "v2"
+logoIndexing = "v1"
 
 -- V1: Simple pngs in folder
-if logoIndexing == "v2" do
+if logoIndexing == "v1" do
 (
 	logoDir = maxFilePath + "flickr47\\*"
 	--logoDir = maxFilePath + "dettol_pringles\\*"
@@ -129,6 +129,81 @@ for i = 1 to maxLogos do
 	append bmtCache 0
 )
 
+-- Prepare render effects
+blurEffect = blur()
+colorEffect = colorBalance()
+grainEffect = filmGrain()
+
+function deleteEffects =
+(
+	for i = 1 to numEffects do
+		deleteEffect 1
+)
+
+function randEffects =
+(
+	useBlur = random 0 100 < 20
+	useColor = random 0 100 < 30
+	useGrain = random 0 100 < 15
+	format "useBlur % useColor % useGrain %\n" useBlur useColor useGrain to:logStream
+	if useBlur then
+	(
+		blurEffect.blur_type = random 1 2 --random 0 2
+		if blurEffect.blur_type == 0 then -- Uniform
+		(
+			blurEffect.bUnifPixRad = 1
+			format "bUnifPixRad %\n" blurEffect.bUnifPixRad to:logStream
+		)
+		else if blurEffect.blur_type == 1 then -- Directional
+		(
+			blurEffect.bDirUPixRad = 1
+			blurEffect.bDirVPixRad = 0
+			blurEffect.bDirRotation = random 0 89
+			blurEffect.bDirUTrail = random 0 20
+			format "bDirUPixRad % bDirVPixRad %\n" blurEffect.bDirUPixRad blurEffect.bDirVPixRad to:logStream
+			format "bDirRotation % bDirUTrail %\n" blurEffect.bDirRotation blurEffect.bDirUTrail to:logStream
+		)
+		else if blurEffect.blur_type == 2 then -- Radial
+		(
+			blurEffect.bRadialPixRad = 1
+			blurEffect.bRadialXOrig = random 0 500
+			blurEffect.bRadialYOrig = random 0 500
+			format "bRadialPixRad % bRadialXOrig % bRadialYOrig %\n" blurEffect.bRadialPixRad blurEffect.bRadialXOrig blurEffect.bRadialYOrig to:logStream
+		)
+	)
+	if useColor then
+	(
+		colorEffect.red = random -10 20
+		colorEffect.green = random -10 20
+		colorEffect.blue = random -10 20
+		format "red % green % blue %\n" colorEffect.red colorEffect.green colorEffect.blue to:logStream
+	)
+	if useGrain then
+	(
+		grainEffect.Grain = random 0.1 0.5
+		format "Grain %\n" grainEffect.Grain to:logStream
+	)
+	if useColor then
+		addEffect colorEffect
+	if useBlur and useGrain then
+	(
+		if random 0 1 == 0 then
+		(
+			addEffect blurEffect
+			addEffect grainEffect
+		)
+		else
+		(
+			addEffect grainEffect
+			addEffect blurEffect
+		)
+	)
+	else if useBlur then
+		addEffect blurEffect
+	else if useGrain then
+		addEffect grainEffect
+)
+
 function randCam numLogos =
 (
 	pos = point3 0 0 0
@@ -206,21 +281,21 @@ function createMaterial logoBitmap matIndex =
 	comp = compositeTexture()
 	comp.add()
 	
-	randTexture = currentMaterialLibrary[random 1 currentMaterialLibrary.count]
-	if matIndex != undefined then
-	(
-		randTexture = currentMaterialLibrary[matIndex]
-	)
+	if matIndex == undefined then
+		matIndex = random 1 currentMaterialLibrary.count
+	randTexture = currentMaterialLibrary[matIndex]
 
-	if hasProperty randTexture "Generic_Image" then
+	if hasProperty randTexture "Generic_Image" and randTexture.Generic_Image != undefined then
 	(
 		comp.mapList[1] = randTexture.Generic_Image
+		format "Logo background texture % %\n" matIndex randTexture to:logStream
 	)
 	else
 	(
 		-- Random background color
 		color1 = getRandColor()
 		comp.mapList[1] = colorMap solidcolor:color1
+		format "Logo background color %\n" color1 to:logStream
 	)
 	
 	-- Insert logo if needed
@@ -243,7 +318,6 @@ function createMaterial logoBitmap matIndex =
 
 	logoMat = physicalMaterial()
 	logoMat.base_color_map = comp
-	format "Logo background color %\n" color1 to:logStream
 
 	-- Random bump map
 	/*
@@ -402,7 +476,6 @@ function randLogo objIndex logoIndex matIndex =
 	(
 		logoObj.material = createMaterial bmt matIndex
 	)
-	logoObj.material = createMaterial bmt matIndex
 	
 	-- Return coordinates of logo corners and logo index
 	z = 0
@@ -682,11 +755,15 @@ function main =
 		)
 		print "randDistractors"
 		randDistractors numLogos
+		print "deleteEffects"
+		deleteEffects()
 		print "renderCam"
 		for j = 1 to numLogos do
 		(
 			renderMask i j
 		)
+		print "randEffects"
+		randEffects()
 		renderRgb i
 		i = i + 1
 	)
