@@ -80,7 +80,6 @@ for i in logoPaths do
 ) 
 
 -- Load line images
-/*
 print "Loading line images"
 linesDir = maxFilePath + "lines\\output0\\*"
 linesPaths = getFiles linesDir
@@ -106,7 +105,6 @@ for i in linesPaths do
 	bmt.coords.realWorldWidth = ratio * bmt.coords.realWorldHeight
 	append linesImgs1 bmt
 )
-*/
 
 -- Load bump texture images
 print "Loading bump images"
@@ -283,8 +281,8 @@ function getRandColor =
 function createMaterial logoBitmap matIndex =
 (
 	comp = compositeTexture()
-	comp.add()
-	
+
+	-- Background texture/color
 	if matIndex == undefined then
 		matIndex = random 1 currentMaterialLibrary.count
 	randTexture = currentMaterialLibrary[matIndex]
@@ -302,37 +300,38 @@ function createMaterial logoBitmap matIndex =
 		format "Logo background color %\n" color1 to:logStream
 	)
 	
+	-- Lines underlay
+	if random 0 100 < 5 then
+	(
+		comp.add()
+		comp.mapList[2] = linesImgs0[random 1 linesImgs0.count]
+	)
+	
 	-- Insert logo if needed
 	if logoBitmap != undefined then
 	(
 		comp.add()
-		comp.mapList[2] = logoBitmap
-	)	
-	
-	/*
-	-- Lines
-	comp.mapList[2] = linesImgs0[random 1 linesImgs0.count]
-	comp.mapList[3] = bmt
-	if random 0 1 == 0 then
+		comp.mapList[comp.mapList.count] = logoBitmap
+	)
+
+	-- Lines overlay
+	if random 0 100 < 5 then
 	(
 		comp.add()
-		comp.mapList[4] = linesImgs1[random 1 linesImgs1.count]
-	)
-	*/
+		comp.mapList[comp.mapList.count] = linesImgs1[random 1 linesImgs1.count]
+	)	
 
 	logoMat = physicalMaterial()
 	logoMat.base_color_map = comp
 
 	-- Random bump map
-	/*
-	if random 0 1 == 0 then
+	if random 0 100 < 10 then
 	(
 		logoMat.bump_map_amt = random 0.5 1.0
 		logoMat.bump_map = bumpImgs[random 1 bumpImgs.count]
 		format "Bump map % amount %\n" logoMat.bump_map.fileName logoMat.bump_map_amt to:logStream
 	)
 	else logoMat.bump_map = undefined
-	*/
 	
 	-- Randomize other material properties
 	if random 0 2 == 0 then logoMat.metalness = random 0.1 1.0
@@ -342,8 +341,9 @@ function createMaterial logoBitmap matIndex =
 	logoMat
 )
 
-function randLogo objIndex logoIndex matIndex =
+function randLogo objIndex logoIndex matIndex seeder =
 (
+	seed (startSeed + seeder * 41769)
 	-- Choose a random logo bitmap texture and get its aspect ratio
 	--logoIndex = random 1 logoPngs.count
 	bmtCache[objIndex] = copy logoPngs[logoIndex]
@@ -467,6 +467,7 @@ function randLogo objIndex logoIndex matIndex =
 
 	-- Put material together
 	-- If plane, then chance for transparent background
+	seed (startSeed + seeder * 206731)
 	rand = random 0 2
 	if shapeType == "plane" and rand == 0 then
 	(
@@ -738,17 +739,18 @@ function main =
 		outputSize = point2 sizes[random 1 sizes.count] sizes[random 1 sizes.count]
 		format "Output size: %\n" outputSize to:logStream
 		print "randLogo"
-		seed (startSeed + i * 211)
 		logoInfos = #()
 		for j = 1 to numLogos do
 		(
+			seeder = i * 211 + j * 317
+			seed (startSeed + seeder * 941)
 			r = random 1 inds.count
 			ind = logoInds[inds[r]]
 			if classOf ind == Array do
 			(
 				ind = ind[random 1 ind.count]
 			)
-			logoInfo = randLogo j ind undefined
+			logoInfo = randLogo j ind undefined seeder
 			deleteItem inds r
 			append logoInfos logoInfo
 		)
