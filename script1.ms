@@ -2,10 +2,14 @@
 
 outputSize = point2 640 480	-- can change during runtime
 
+-- Create output dir
 stamp =  timeStamp()
-seed stamp
 outputDir = maxFilePath + "output\\" + stamp as string
 makeDir outputDir
+
+-- RNG seed
+startSeed = 123456
+seed startSeed
 
 -- Create log file
 logPath = outputDir + "\\log.txt"
@@ -717,19 +721,24 @@ function main =
 	i=0
 	while inds.count > 0 do
 	(
+		seed (startSeed + i * 3421)
 		format "\n\nIteration %\n" i to:logStream
 		if keyboard.escPressed do exit
 		numLogos = random 1 (amin 3 inds.count)
  		format "numLogos: %\n" numLogos to:logStream
 		print "randLights"
+		seed (startSeed + i * 1243)
 		randLights()
 		print "randBackground"
+		seed (startSeed + i * 472)
 		randBackground()
 		print "randOutputSize"
+		seed (startSeed + i * 691)
 		sizes = #(400, 450, 500)
 		outputSize = point2 sizes[random 1 sizes.count] sizes[random 1 sizes.count]
 		format "Output size: %\n" outputSize to:logStream
 		print "randLogo"
+		seed (startSeed + i * 211)
 		logoInfos = #()
 		for j = 1 to numLogos do
 		(
@@ -745,6 +754,7 @@ function main =
 		)
 		
 		print "randCam"
+		seed (startSeed + i * 31212)
 		randCam numLogos
 		print "saveLogoInfo"
 		outputTxt = outputDir + "\\" + i as string + "_bb.txt"
@@ -754,8 +764,10 @@ function main =
 			removeObj logoObjs[j]
 		)
 		print "randDistractors"
+		seed (startSeed + i * 94761)
 		randDistractors numLogos
 		print "deleteEffects"
+		seed (startSeed + i * 231215)
 		deleteEffects()
 		print "renderCam"
 		for j = 1 to numLogos do
@@ -763,6 +775,7 @@ function main =
 			renderMask i j
 		)
 		print "randEffects"
+		seed (startSeed + i * 794631)
 		randEffects()
 		renderRgb i
 		i = i + 1
