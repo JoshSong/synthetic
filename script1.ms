@@ -8,7 +8,12 @@ outputDir = maxFilePath + "output\\" + stamp as string
 makeDir outputDir
 
 -- RNG seed
-startSeed = 123456
+--startSeed = 123456
+--startSeed = 3123456
+--startSeed = 5161
+--startSeed = 2113
+startSeed = 3673
+--startSeed = 4221
 seed startSeed
 
 -- Create log file
@@ -17,13 +22,18 @@ logStream = openFile logPath mode:"w"
 
 tableHeight = 60 -- must match true table height
 
---matLibPath = maxFilePath + "mylib.mat"
-matLibPath = maxFilePath + "mylib_scanline.mat"
+rendererName = "scanline"
+
+if rendererName == "scanline" then
+	matLibPath = maxFilePath + "mylib_scanline.mat"
+else if rendererName == "art" then
+	matLibPath = maxFilePath + "mylib.mat"
+else
+	throw "Unrecognized renderer"
 
 artRenderer = RendererClass.classes[5]()
+artRenderer.quality_db = 27
 scanlineRenderer = RendererClass.classes[1]()
-
-rendererName = "scanline"
 
 -- Load logo images
 print "Loading logo images"
@@ -44,7 +54,8 @@ if logoIndexing == "v1" do
 -- V2: Similar images grouped in folders, mix of json and png
 if logoIndexing == "v2" do
 (
-	dirname = "drinks_v0"
+	--dirname = "drinks_v0"
+	dirname = "robo_v0"
 	logoDir = maxFilePath + dirname + "\\*"
 	dirs = getDirectories logoDir
 	for d in dirs do
@@ -364,6 +375,7 @@ function randLogo objIndex logoIndex matIndex seeder =
 	logoObj.visibility = true
 	logoObj.pos.x = 0
 	logoObj.pos.y = 0
+	logoObj.scale = point3 1 1 1
 	if objIndex == 2 then
 	(
 		logoObj.pos.x = random 0 10
@@ -428,6 +440,28 @@ function randLogo objIndex logoIndex matIndex seeder =
 		maxHeight2 =  (maxC - minC) / ratio
 		format "Radius % height %\n" logoObj.radius logoObj.height to:logStream
 	)
+	else if shapeType == "bottle" then
+	(
+		logoObj.baseObject = copy $Bottle001.baseObject
+		logoObj.rotation.x_rotation = 0
+		logoObj.pos.z = tableHeight
+		
+		radius = 3.5
+		
+		circumference = 2 * pi * radius
+		logoObj.modifiers[1].mapType = 1 -- Cylindrical uvw map
+		logoObj.modifiers[1].cap = true
+		logoObj.modifiers[1].u_tile = circumference
+		
+		maxHeight = 20
+		
+		-- Position logo randomly between 35% and 65% of circumference
+		maxC = 0.65 * circumference
+		minC = 0.35 * circumference
+		maxHeight2 =  (maxC - minC) / ratio
+		
+		logoObj.scale = point3 2 2 2
+	)
 	
 	-- Set UV map gizmo to origin
 	logoObj.modifiers[1].gizmo.pos = point3 0 0 0
@@ -460,6 +494,13 @@ function randLogo objIndex logoIndex matIndex seeder =
 		minU = minC
 		maxV = logoObj.height - bmt.coords.realWorldHeight - 0.2
 		minV = 0
+	)
+	else if shapeType == "bottle" then
+	(
+		maxU = maxC - bmt.coords.realWorldWidth
+		minU = minC
+		maxV = 15 - bmt.coords.realWorldHeight
+		minV = 3
 	)
 	bmt.coords.U_offset = random minU maxU
 	bmt.coords.V_offset = random minV maxV
