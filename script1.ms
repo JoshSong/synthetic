@@ -45,7 +45,7 @@ logoIndexing = "v1"
 -- V1: Simple pngs in folder
 if logoIndexing == "v1" do
 (
-	logoDir = maxFilePath + "flickr47\\*"
+	logoDir = maxFilePath + "flickr32\\*"
 	--logoDir = maxFilePath + "dettol_pringles\\*"
 	logoPaths = getFiles logoDir
 	for i = 1 to logoPaths.count do append logoInds i
