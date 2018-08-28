@@ -776,8 +776,9 @@ function main =
 		randBackground()
 		print "randOutputSize"
 		seed (startSeed + i * 691)
-		sizes = #(400, 450, 500)
-		outputSize = point2 sizes[random 1 sizes.count] sizes[random 1 sizes.count]
+		widths = #(500, 650, 800)
+		heights = #(400, 500, 600)
+		outputSize = point2 widths[random 1 widths.count] heights[random 1 heights.count]
 		format "Output size: %\n" outputSize to:logStream
 		print "randLogo"
 		logoInfos = #()
