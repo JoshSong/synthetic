@@ -352,7 +352,7 @@ function createMaterial logoBitmap matIndex =
 	logoMat
 )
 
-function randLogo objIndex logoIndex matIndex seeder =
+function randLogo objIndex logoIndex matIndex seeder numLogos =
 (
 	seed (startSeed + seeder * 41769)
 	-- Choose a random logo bitmap texture and get its aspect ratio
@@ -376,6 +376,9 @@ function randLogo objIndex logoIndex matIndex seeder =
 	logoObj.pos.x = 0
 	logoObj.pos.y = 0
 	logoObj.scale = point3 1 1 1
+	logoObj.rotation.x_rotation = 0
+	logoObj.rotation.y_rotation = 0
+	logoObj.rotation.z_rotation = 90
 	if objIndex == 2 then
 	(
 		logoObj.pos.x = random 0 10
@@ -467,9 +470,19 @@ function randLogo objIndex logoIndex matIndex seeder =
 	logoObj.modifiers[1].gizmo.pos = point3 0 0 0
 	logoObj.modifiers[1].gizmo.rotation = quat 0 0 -1 0
 
-	-- Randomize rotation
-	logoObj.rotation.z_rotation = random 77 103
-	format "z_rotation %\n" logoObj.rotation.z_rotation to:logStream
+	-- Randomize rotation using world frame
+	-- Do not randomize too much if there are other logos, can cause occlusion
+	if (random 0 100) < 70 then
+	(
+		if numLogos == 1 then
+			rotate logoObj (eulerangles (random -90 90) (random -10 10) (random -10 10))
+		else
+			rotate logoObj (eulerangles (random -10 10) (random -10 10) (random -10 10))
+	)
+	
+	-- Ensure object is still above table after rotation
+	move logoObj [0, 0, tableHeight - logoObj.min.z]
+	format "Rotation x % y % z %\n" logoObj.rotation.x_rotation logoObj.rotation.y_rotation logoObj.rotation.z_rotation to:logStream
 
 	-- Randomize logo size	
 	if maxHeight2 < maxHeight then maxHeight = maxHeight2
@@ -637,7 +650,12 @@ function randDistractor obj numLogos =
 		if isOk then loop = false
 	)
 	obj.pos = point3 x y z
-	format "randDistractor pos % shape % mat %\n" obj.pos shapeType obj.mat to:logStream
+	
+	-- Random rotation
+	obj.rotation.x_rotation = random -10 10
+	obj.rotation.y_rotation = random -10 10
+	obj.rotation.z_rotation = random -10 10
+	format "randDistractor pos % shape % mat % rot \n" obj.pos shapeType obj.mat obj.rotation to:logStream
 )
 
 function randDistractors numLogos =
@@ -792,10 +810,16 @@ function main =
 			(
 				ind = ind[random 1 ind.count]
 			)
-			logoInfo = randLogo j ind undefined seeder
+			logoInfo = randLogo j ind undefined seeder numLogos
 			deleteItem inds r
 			append logoInfos logoInfo
 		)
+		
+		--if i < 990 then
+		--(
+		--	i += 1
+		--	continue
+		--)
 		
 		print "randCam"
 		seed (startSeed + i * 31212)
